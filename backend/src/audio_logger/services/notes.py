@@ -46,3 +46,9 @@ class NoteService:
         )
         saved_id = self.repository.save(note, audio)
         return note.model_copy(update={"id": saved_id})
+
+    def edit(self, id: str, text: str) -> Note:
+        note = self.repository.get(id)
+        note = note.model_copy(update={"text": text, "edited_at": utcnow()})
+        self.repository.update(note)
+        return note

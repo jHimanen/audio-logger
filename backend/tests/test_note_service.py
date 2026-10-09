@@ -5,6 +5,7 @@ import pytest
 
 from audio_logger.providers.fake import FakeTranscriptionProvider
 from audio_logger.services.notes import NoteService, TranscriptionFailed
+from audio_logger.storage.base import NoteNotFound
 from audio_logger.storage.filesystem import FilesystemNoteRepository
 
 AUDIO = b"\x1aE\xdf\xa3webm-bytes"
@@ -61,3 +62,42 @@ def test_transcription_failure_still_saves_audio(repo: FilesystemNoteRepository)
     assert meta["transcription"] is None
     assert meta["duration_ms"] == 999
     assert str(info.value) == "vendor down"
+
+
+def test_edit_sets_text_and_edited_at(
+    fake_provider: FakeTranscriptionProvider,
+    repo: FilesystemNoteRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = NoteService(fake_provider, repo, "fi")
+    created = service.create(AUDIO, "audio/webm", 1)
+    edited_at = datetime(2026, 10, 9, 15, 0, 0, tzinfo=UTC)
+    monkeypatch.setattr("audio_logger.services.notes.utcnow", lambda: edited_at)
+
+    note = service.edit(created.id, "Muokattu.")
+
+    assert note.text == "Muokattu."
+    assert note.edited_at == edited_at
+    assert note.transcription is not None
+    assert note.transcription.raw_text == "Tämä on testi."
+    assert repo.get(created.id) == note
+
+
+def test_edit_note_without_transcription(repo: FilesystemNoteRepository) -> None:
+    service = NoteService(FakeTranscriptionProvider(error="down"), repo, "fi")
+    with pytest.raises(TranscriptionFailed) as info:
+        service.create(AUDIO, "audio/webm", 1)
+
+    note = service.edit(info.value.note_id, "Käsin kirjoitettu.")
+
+    assert note.transcription is None
+    assert note.edited_at is not None
+    assert repo.get(note.id) == note
+
+
+def test_edit_missing_note_raises(
+    fake_provider: FakeTranscriptionProvider, repo: FilesystemNoteRepository
+) -> None:
+    service = NoteService(fake_provider, repo, "fi")
+    with pytest.raises(NoteNotFound):
+        service.edit("nope", "x")

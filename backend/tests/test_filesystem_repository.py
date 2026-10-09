@@ -111,3 +111,57 @@ def test_failed_transcription_saved_as_null(repo: FilesystemNoteRepository) -> N
     assert meta["transcription"] is None
     assert (repo.root / id / "note.md").read_text() == ""
     assert repo.get(id).transcription is None
+
+
+def test_update_rewrites_text_and_meta_not_audio(repo: FilesystemNoteRepository) -> None:
+    created = datetime(2026, 10, 9, 14, 32, 5, tzinfo=UTC)
+    id = repo.save(make_note(created), AUDIO)
+    edited = datetime(2026, 10, 9, 15, 0, 0, tzinfo=UTC)
+
+    repo.update(repo.get(id).model_copy(update={"text": "Muokattu.", "edited_at": edited}))
+
+    folder = repo.root / id
+    assert (folder / "note.md").read_text(encoding="utf-8") == "Muokattu."
+    meta = json.loads((folder / "meta.json").read_text(encoding="utf-8"))
+    assert meta["edited_at"] == "2026-10-09T15:00:00Z"
+    assert meta["transcription"]["raw_text"] == "Hei maailma."
+    assert "text" not in meta
+    assert (folder / "audio.webm").read_bytes() == AUDIO
+    assert repo.get(id).text == "Muokattu."
+
+
+def test_update_missing_note_raises(repo: FilesystemNoteRepository) -> None:
+    repo.root.mkdir()
+    with pytest.raises(NoteNotFound):
+        repo.update(make_note(datetime(2026, 10, 9, 14, 32, 5, tzinfo=UTC)))
+
+
+def test_delete_removes_folder(repo: FilesystemNoteRepository) -> None:
+    keep = repo.save(make_note(datetime(2026, 10, 9, 14, 0, 0, tzinfo=UTC)), AUDIO)
+    gone = repo.save(make_note(datetime(2026, 10, 9, 15, 0, 0, tzinfo=UTC)), AUDIO)
+
+    repo.delete(gone)
+
+    assert not (repo.root / gone).exists()
+    assert [n.id for n in repo.list()] == [keep]
+
+
+def test_delete_missing_or_escaping_raises(repo: FilesystemNoteRepository) -> None:
+    repo.root.mkdir()
+    for id in ("nope", "..", ""):
+        with pytest.raises(NoteNotFound):
+            repo.delete(id)
+    assert repo.root.is_dir()
+
+
+def test_delete_symlink_outside_root_raises(repo: FilesystemNoteRepository, tmp_path: Path) -> None:
+    target = tmp_path / "outside"
+    target.mkdir()
+    (target / "meta.json").write_text("{}")
+    repo.root.mkdir()
+    (repo.root / "link").symlink_to(target)
+
+    with pytest.raises(NoteNotFound):
+        repo.delete("link")
+
+    assert (target / "meta.json").read_text() == "{}"
