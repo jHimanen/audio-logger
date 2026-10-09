@@ -34,6 +34,18 @@ function errorFromResponse(status: number, body: string): ApiError {
   return new ApiError(status >= 500 ? 'server_error' : 'unknown')
 }
 
+/** fetch that throws ApiError on a network failure or a non-2xx response. */
+async function send(url: string, init?: RequestInit): Promise<Response> {
+  let res: Response
+  try {
+    res = await fetch(url, init)
+  } catch {
+    throw new ApiError('server_error')
+  }
+  if (!res.ok) throw errorFromResponse(res.status, await res.text())
+  return res
+}
+
 export async function fetchConfig(): Promise<{ locale: string }> {
   const res = await fetch('/api/config')
   if (!res.ok) throw new ApiError('server_error')
@@ -42,14 +54,23 @@ export async function fetchConfig(): Promise<{ locale: string }> {
 
 /** All saved notes, newest first. */
 export async function fetchNotes(): Promise<NoteResponse[]> {
-  let res: Response
-  try {
-    res = await fetch('/api/notes')
-  } catch {
-    throw new ApiError('server_error')
-  }
-  if (!res.ok) throw errorFromResponse(res.status, await res.text())
+  const res = await send('/api/notes')
   return res.json() as Promise<NoteResponse[]>
+}
+
+/** Replaces the note's text; resolves with the updated note. */
+export async function updateNote(id: string, text: string): Promise<NoteResponse> {
+  const res = await send(`/api/notes/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  return res.json() as Promise<NoteResponse>
+}
+
+/** Deletes the note and its audio. */
+export async function deleteNote(id: string): Promise<void> {
+  await send(`/api/notes/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export function audioUrl(id: string): string {

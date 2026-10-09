@@ -1,4 +1,4 @@
-import { formatDuration } from '../format'
+import { dateFormat, formatDuration } from '../format'
 import { t } from '../i18n'
 import type { ErrorCode, NoteResponse } from '../types'
 
@@ -9,11 +9,6 @@ interface Props {
   onSelect: (note: NoteResponse) => void
   disabled: boolean
 }
-
-const dateFormat = new Intl.DateTimeFormat(t('intl.locale'), {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
 
 function preview(note: NoteResponse): string {
   if (note.transcription === null) return t('transcript.failed')

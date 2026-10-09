@@ -97,7 +97,27 @@ h1 {
 }
 
 .transcript-text {
-  white-space: pre-wrap;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 8rem;
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.secondary-button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .saved-to {
