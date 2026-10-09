@@ -10,9 +10,15 @@ interface Props {
   disabled: boolean
 }
 
-function preview(note: NoteResponse): string {
-  if (note.transcription === null) return t('transcript.failed')
-  return note.text.replace(/\s+/g, ' ').trim().slice(0, 120) || t('transcript.empty')
+/** The note text on one line, or a muted hint when it has none. */
+function Preview({ note }: { note: NoteResponse }) {
+  const text = note.text.replace(/\s+/g, ' ').trim().slice(0, 120)
+  if (text) return <span className="note-preview">{text}</span>
+  return (
+    <span className="note-preview muted">
+      {note.transcription === null ? t('transcript.failed') : t('transcript.empty')}
+    </span>
+  )
 }
 
 export function NoteList({ notes, error, selectedId, onSelect, disabled }: Props) {
@@ -39,9 +45,7 @@ export function NoteList({ notes, error, selectedId, onSelect, disabled }: Props
                 {dateFormat.format(new Date(note.created_at))} ·{' '}
                 {formatDuration(note.duration_ms)}
               </span>
-              <span className={note.transcription === null ? 'note-preview muted' : 'note-preview'}>
-                {preview(note)}
-              </span>
+              <Preview note={note} />
             </button>
           </li>
         ))}
