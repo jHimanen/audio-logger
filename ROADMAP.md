@@ -1,7 +1,7 @@
 # Roadmap
 
 > Living document. Stages are ordered; each stage is shippable on its own.
-> Last updated: 2026-10-09 (Stage 1 implemented)
+> Last updated: 2026-10-09 (Stage 2 implemented)
 
 ## Stage 0 – Planning 
 
@@ -39,14 +39,14 @@ Repo
 
 Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 
-## Stage 2 – Recording ergonomics (current)
+## Stage 2 – Recording ergonomics
 
-- [ ] Pause / resume within one recording (`MediaRecorder.pause()` / `resume()`)
-- [ ] Keyboard: pause key, visible shortcut hints
-- [ ] Level meter (Web Audio `AnalyserNode`) so the user sees the mic is live
-- [ ] Note list in the UI (`GET /api/notes`), open an existing note, replay its audio
+- [x] Pause / resume within one recording (`MediaRecorder.pause()` / `resume()`)
+- [x] Keyboard: pause key, visible shortcut hints
+- [x] Level meter (Web Audio `AnalyserNode`) so the user sees the mic is live
+- [x] Note list in the UI (`GET /api/notes`), open an existing note, replay its audio
 
-## Stage 3 – Editing
+## Stage 3 – Editing (current)
 
 - [ ] Editable transcript before and after saving (`PUT /api/notes/{id}`)
 - [ ] `raw_text` stays immutable in `meta.json`; `note.md` holds the edited text; `edited_at` set
@@ -86,3 +86,7 @@ Leading candidate: **GCP** (Cloud Run + Cloud Storage; see ARCHITECTURE.md §9).
 - Local STT provider (`whisper-rs` via PyO3) for offline/private use.
 - Streaming transcription for live text while speaking.
 - Speaker diarisation (Scribe v2 supports it) for meeting-style notes.
+- WebM duration/cues header so the player shows a length and can seek (MediaRecorder omits
+  it; fix by rewriting the header on save or in the browser).
+- `FilesystemNoteRepository.list()` fails the whole list on one corrupt `meta.json`; skip and
+  log bad entries instead.

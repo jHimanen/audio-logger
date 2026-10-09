@@ -39,10 +39,14 @@ FastAPI serves `frontend/dist` at http://127.0.0.1:8000 when the folder exists.
 
 ## Use
 
-Click the button or press **Space** to start, again to stop; **Escape** cancels without saving.
+Click the button or press **Space** to start, again to stop; **P** pauses and resumes;
+**Escape** cancels without saving. The bar next to the button shows the mic level.
 The transcript appears in the page and the note lands in `notes/<id>/` as `note.md`,
 `audio.webm` and `meta.json`. If transcription fails, the audio and metadata are still saved
 and the UI shows the folder.
+
+Saved notes are listed below the recorder, newest first. Click one to read its transcript and
+replay the audio (seeking does not work yet: MediaRecorder's WebM has no duration header).
 
 ## Checks
 
@@ -50,6 +54,18 @@ and the UI shows the folder.
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 cd frontend && pnpm build && pnpm lint
 ```
+
+Manual Chrome checklist (no frontend unit tests; run with `STT_PROVIDER=fake`):
+
+1. Space starts; P pauses (timer freezes, status "Tauko.", button "Jatka"); P resumes from the
+   frozen value; Space stops. The saved duration matches the player: pauses add no silence.
+2. Click "Tauko" with the mouse, then Space: the recording stops, as the hint says.
+3. Escape while paused cancels; the mic indicator clears and nothing is saved.
+4. Cmd+P still opens print; P does nothing while idle.
+5. The level bar moves while recording, dims while paused, and is gone after stop.
+6. After saving, the new note heads the list; a failed transcription also appears, marked.
+7. Open an old note: transcript and player appear. Space with the player focused plays audio;
+   Space elsewhere starts a new recording and closes the note. The list is disabled meanwhile.
 
 ## API
 

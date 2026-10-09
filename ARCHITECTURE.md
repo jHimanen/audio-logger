@@ -41,8 +41,12 @@ Browser (React)  --audio/webm-->  FastAPI backend  --audio-->  ElevenLabs Scribe
 - **Chrome/Chromium only** until deployment. The backend still stores the browser-reported MIME
   type in `meta.json` so Safari (MP4/AAC) can be added later without a migration.
 - Controls: one large record button; **Space** toggles start/stop when focus is not in an
-  editable element; **Escape** cancels the recording without saving. Pause/resume (Stage 2)
-  uses `MediaRecorder.pause()` / `resume()`, which yields one continuous file.
+  editable element; **Escape** cancels the recording without saving; **P** pauses/resumes
+  (no modifiers, so Cmd+P still prints). Pause/resume uses `MediaRecorder.pause()` /
+  `resume()`, which yields one continuous file; `duration_ms` is active time, pauses excluded.
+  A per-state hint line shows the keys. A level meter (`AnalyserNode`) shows the mic is live.
+- Note list below the recorder (`GET /api/notes`); opening a note shows its transcript and an
+  `<audio>` player on `GET /api/notes/{id}/audio`. Selection is in-memory, no router.
 - UI state machine: `idle -> recording -> (paused <-> recording) -> uploading -> transcribing -> done | error`.
 
 ### 3.2 Backend – Python 3.12+ / FastAPI
@@ -113,6 +117,10 @@ notes/                          # gitignored; root configurable via NOTES_DIR
   `Note` record and moves audio to blob storage.
 - `NoteRepository` interface: `save(note, audio) -> id`, `get(id)`, `list()`. Filesystem
   implementation in the MVP; the repository owns id uniqueness (collision -> `-2`, `-3` suffix).
+- The audio route derives the file from the folder layout (`NOTES_DIR/<id>/<audio.file>`), as
+  the routes already do for `path`; the interface has no audio accessor. Stage 5 changes both.
+- Known limitation: MediaRecorder's WebM has no duration/cues header, so Chrome's player shows
+  no length and cannot seek, although the route supports `Range`.
 
 ## 4. Data flow (MVP)
 
@@ -248,3 +256,11 @@ Google Cloud is the leading candidate for deployment. Assessed 2026-10-09; not y
 | 2026-10-09 | Upload via `XMLHttpRequest` with `upload.onload` | `fetch` | `fetch` has no upload-complete signal for the `uploading -> transcribing` transition; XHR is ten lines, no dependency |
 | 2026-10-09 | Relative `NOTES_DIR` / `FRONTEND_DIST` resolve against the repo root | Process working directory | Matches `.env.example`; independent of where uvicorn is launched |
 | 2026-10-09 | Upload limit enforced by reading `MAX_UPLOAD_BYTES + 1` in the route | Request-body cap in the server | Caps memory and what is persisted; Starlette still spools an oversized body to a temp file before the 413, acceptable for a localhost single-user MVP |
+| 2026-10-09 | Audio route derives `notes_dir / id / audio.file` after `repository.get(id)` | `audio_path()` on `NoteRepository` | The route already builds `path` from the layout; no protocol change for one consumer. Stage 5 changes `path` and the audio route together |
+| 2026-10-09 | `GET /api/notes` returns full notes (same JSON as the `POST` 201) | `NoteSummary` model | The filesystem `list()` reads every `note.md` anyway; the UI opens a note with no second fetch. Revisit at Stage 5 |
+| 2026-10-09 | `NoteNotFound` -> 404 `not_found` in a route helper; routes call `service.repository` | Handler in `errors.py`; `NoteService.get/list` passthroughs | Matches the `TranscriptionFailed` precedent; one-line delegations add nothing |
+| 2026-10-09 | `duration_ms` is active recording time (pauses excluded), tracked via a virtual `startedAt` | Wall-clock time; `{segmentStartedAt, elapsedBeforeMs}` | MediaRecorder captures nothing while paused, so it matches the file; `Timer` and the `recording` state stay unchanged |
+| 2026-10-09 | Pause key **P** via `e.key`, ignored with Cmd/Ctrl/Alt; Space acts on the recorder unless focus is on the record button or an editable/`<audio>` element | `e.code`; native Space click on any focused button | Hint matches the printed key on any layout; Cmd+P still prints; Space always does what the hint says |
+| 2026-10-09 | `LevelMeter` owns its `AudioContext` and rAF loop and writes `style.transform` through a ref | Hook + React state per frame | One owner, no re-render per frame, StrictMode-safe cleanup |
+| 2026-10-09 | Note selection is in-memory state, no router | React Router + SPA fallback | Single user, no deep-link need; the backend has no SPA fallback |
+| 2026-10-09 | `"strict": true` in the frontend tsconfig | Default (non-strict) | The "tsc instead of frontend tests" decision assumes strict checking |
