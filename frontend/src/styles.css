@@ -115,6 +115,10 @@ h1 {
   margin-top: 0.5rem;
 }
 
+.danger-button {
+  color: var(--accent);
+}
+
 .secondary-button:disabled {
   opacity: 0.5;
   cursor: default;

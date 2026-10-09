@@ -42,7 +42,12 @@ export default function App() {
   }
 
   // The editor shows its own saved copy, so `viewed` is left as is; only the list reloads.
-  const editor = useNoteEditor(viewed, reload)
+  const editor = useNoteEditor(viewed, reload, (id) => {
+    // The user may have opened another note while the delete was in flight.
+    setSelected((s) => (s?.id === id ? null : s))
+    reset()
+    reload()
+  })
 
   // Starting a recording, opening another note or "Uusi äänitys" all drop the draft.
   const guard = useUnsavedGuard(editor.dirty)
@@ -90,7 +95,15 @@ export default function App() {
       <ShortcutHints status={state.status} />
 
       <StatusMessage state={state} />
-      {viewed && <TranscriptView note={viewed} editor={editor} disabled={busy} />}
+      {viewed && <TranscriptView
+          note={viewed}
+          editor={editor}
+          disabled={busy}
+          onDelete={() => {
+            // Deleting also drops any draft; this confirm covers both.
+            if (window.confirm(t('edit.deleteConfirm'))) void editor.remove()
+          }}
+        />}
 
       <NoteList
         notes={notes}

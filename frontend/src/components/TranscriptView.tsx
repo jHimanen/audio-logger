@@ -8,9 +8,10 @@ interface Props {
   note: NoteResponse
   editor: NoteEditor
   disabled: boolean
+  onDelete: () => void
 }
 
-export function TranscriptView({ note, editor, disabled }: Props) {
+export function TranscriptView({ note, editor, disabled, onDelete }: Props) {
   const hint = editor.text.trim()
     ? null
     : note.transcription === null
@@ -55,6 +56,14 @@ export function TranscriptView({ note, editor, disabled }: Props) {
             {t('edit.restore')}
           </button>
         )}
+        <button
+          type="button"
+          className="secondary-button danger-button"
+          onClick={onDelete}
+          disabled={disabled || editor.saving}
+        >
+          {t('edit.delete')}
+        </button>
         {editor.editedAt && (
           <span className="muted">
             {t('edit.editedAt', { date: dateFormat.format(new Date(editor.editedAt)) })}
