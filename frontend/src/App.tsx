@@ -26,7 +26,12 @@ export default function App() {
           <span className="timer">{formatDuration(state.elapsedMs)}</span>
         )}
         {(state.status === 'recording' || state.status === 'paused') && (
-          <button type="button" className="secondary-button" onClick={togglePause}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={togglePause}
+            aria-pressed={state.status === 'paused'}
+          >
             {state.status === 'paused' ? t('record.resume') : t('record.pause')}
           </button>
         )}

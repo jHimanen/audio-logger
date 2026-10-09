@@ -21,8 +21,6 @@ export interface Recorder {
   start: () => Promise<void>
   stop: () => void
   cancel: () => void
-  pause: () => void
-  resume: () => void
   togglePause: () => void
   toggle: () => void
   reset: () => void
@@ -167,5 +165,5 @@ export function useRecorder(): Recorder {
     }
   }, [transition])
 
-  return { state, stream, start, stop, cancel, pause, resume, togglePause, toggle, reset }
+  return { state, stream, start, stop, cancel, togglePause, toggle, reset }
 }

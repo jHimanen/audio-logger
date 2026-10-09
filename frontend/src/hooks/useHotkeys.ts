@@ -28,8 +28,10 @@ export function useHotkeys({ onToggle, onCancel, onTogglePause }: Handlers): voi
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat || isEditable(e.target)) return
       if (e.code === 'Space') {
-        // A focused button fires its own click on Space; let that be the toggle.
-        if (e.target instanceof HTMLElement && e.target.tagName === 'BUTTON') return
+        // The focused record button fires its own click on Space; let that be the toggle.
+        // On any other focused button, preventDefault stops Space from clicking it, so Space
+        // always does what the hint says.
+        if (e.target instanceof HTMLElement && e.target.closest('.record-button')) return
         e.preventDefault()
         onToggle()
       } else if (e.key === 'Escape') {
