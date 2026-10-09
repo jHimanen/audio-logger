@@ -14,6 +14,7 @@ def create_app(
     provider: TranscriptionProvider | None = None,
     repository: NoteRepository | None = None,
 ) -> FastAPI:
+    """App factory. Run with `uvicorn audio_logger.main:create_app --factory`."""
     settings = settings or Settings()
     app = FastAPI(title="audio-logger")
     app.state.settings = settings
@@ -26,6 +27,3 @@ def create_app(
     if settings.frontend_dist.is_dir():
         app.mount("/", StaticFiles(directory=settings.frontend_dist, html=True))
     return app
-
-
-app = create_app()
