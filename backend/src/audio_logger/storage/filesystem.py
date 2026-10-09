@@ -28,7 +28,7 @@ class FilesystemNoteRepository:
 
     def get(self, id: str) -> Note:
         folder = self.root / id
-        if folder.parent != self.root or not (folder / META_FILE).is_file():
+        if folder.resolve().parent != self.root.resolve() or not (folder / META_FILE).is_file():
             raise NoteNotFound(id)
         meta = json.loads((folder / META_FILE).read_text(encoding="utf-8"))
         meta["text"] = (folder / NOTE_FILE).read_text(encoding="utf-8")
