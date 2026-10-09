@@ -3,12 +3,12 @@
 > Living document. Stages are ordered; each stage is shippable on its own.
 > Last updated: 2026-10-09 (Stage 1 implemented)
 
-## Stage 0 – Planning (current)
+## Stage 0 – Planning 
 
 - [x] Repo created
 - [x] Tech stack chosen and justified (see ARCHITECTURE.md §10)
-- [ ] ARCHITECTURE.md reviewed and accepted
-- [ ] ROADMAP.md reviewed and accepted
+- [x] ARCHITECTURE.md reviewed and accepted
+- [x] ROADMAP.md reviewed and accepted
 
 ## Stage 1 – MVP: record, transcribe, save
 
@@ -39,7 +39,7 @@ Repo
 
 Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 
-## Stage 2 – Recording ergonomics
+## Stage 2 – Recording ergonomics (current)
 
 - [ ] Pause / resume within one recording (`MediaRecorder.pause()` / `resume()`)
 - [ ] Keyboard: pause key, visible shortcut hints
