@@ -1,3 +1,5 @@
+import { audioUrl } from '../api'
+import { formatDuration } from '../format'
 import { t } from '../i18n'
 import type { NoteResponse } from '../types'
 
@@ -10,7 +12,22 @@ export function TranscriptView({ note }: Props) {
   return (
     <section className="transcript">
       <h2>{t('transcript.title')}</h2>
-      {text ? <p className="transcript-text">{text}</p> : <p className="muted">{t('transcript.empty')}</p>}
+      <div className="playback">
+        <audio
+          controls
+          preload="none"
+          src={audioUrl(note.id)}
+          aria-label={t('transcript.audio')}
+        />
+        <span className="timer">{formatDuration(note.duration_ms)}</span>
+      </div>
+      {note.transcription === null ? (
+        <p className="muted">{t('transcript.failed')}</p>
+      ) : text ? (
+        <p className="transcript-text">{text}</p>
+      ) : (
+        <p className="muted">{t('transcript.empty')}</p>
+      )}
       <p className="muted saved-to">{t('transcript.savedTo', { path: note.path })}</p>
     </section>
   )

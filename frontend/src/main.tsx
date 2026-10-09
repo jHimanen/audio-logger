@@ -6,6 +6,7 @@ import { fetchConfig } from './api.ts'
 import { t } from './i18n.ts'
 
 document.title = t('app.title')
+document.documentElement.lang = t('intl.locale')
 
 // Only one locale ships for now; the setting is read so a mismatch shows up in the console.
 fetchConfig()

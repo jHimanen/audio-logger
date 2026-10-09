@@ -15,6 +15,10 @@
   "transcript.title": "Litterointi",
   "transcript.savedTo": "Tallennettu kansioon {path}",
   "transcript.empty": "Ei tunnistettua puhetta.",
+  "transcript.audio": "Äänitys",
+  "transcript.failed": "Litterointi epäonnistui.",
+  "notes.title": "Muistiinpanot",
+  "notes.empty": "Ei vielä muistiinpanoja.",
   "action.newRecording": "Uusi äänitys",
   "error.mic_denied": "Mikrofonin käyttö estettiin. Salli mikrofoni selaimen asetuksista.",
   "error.mic_unavailable": "Mikrofonia ei löytynyt.",
@@ -26,5 +30,7 @@
   "error.empty_audio": "Äänitys oli tyhjä.",
   "error.validation_error": "Palvelin hylkäsi pyynnön.",
   "error.server_error": "Palvelimella tapahtui virhe.",
-  "error.unknown": "Tuntematon virhe."
+  "error.not_found": "Muistiinpanoa ei löytynyt.",
+  "error.unknown": "Tuntematon virhe.",
+  "intl.locale": "fi-FI"
 }

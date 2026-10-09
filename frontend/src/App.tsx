@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { LevelMeter } from './components/LevelMeter'
+import { NoteList } from './components/NoteList'
 import { RecordButton } from './components/RecordButton'
 import { ShortcutHints } from './components/ShortcutHints'
 import { StatusMessage } from './components/StatusMessage'
@@ -6,15 +8,43 @@ import { Timer } from './components/Timer'
 import { TranscriptView } from './components/TranscriptView'
 import { formatDuration } from './format'
 import { useHotkeys } from './hooks/useHotkeys'
+import { useNotes } from './hooks/useNotes'
 import { useRecorder } from './hooks/useRecorder'
 import { t } from './i18n'
+import type { NoteResponse } from './types'
 
 export default function App() {
   const { state, stream, toggle, cancel, togglePause, reset } = useRecorder()
-  useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
+  const { notes, error: notesError, reload } = useNotes()
+  const [selected, setSelected] = useState<NoteResponse | null>(null)
 
   const finished = state.status === 'done' || state.status === 'error'
   const active = state.status === 'recording' || state.status === 'paused'
+  const busy = state.status !== 'idle' && !finished
+  const viewed = state.status === 'done' ? state.note : selected
+
+  // A failed transcription still saves the audio, so it belongs in the list too.
+  const saved =
+    state.status === 'done' ||
+    (state.status === 'error' && state.code === 'transcription_failed')
+  useEffect(() => {
+    if (saved) reload()
+  }, [saved, reload])
+
+  // An opened note must not show under a live recording, however the recording started.
+  // Adjusted during render (not in an effect) when `active` flips.
+  const [wasActive, setWasActive] = useState(active)
+  if (active !== wasActive) {
+    setWasActive(active)
+    if (active) setSelected(null)
+  }
+
+  useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
+
+  const openNote = (note: NoteResponse) => {
+    reset()
+    setSelected(note)
+  }
 
   return (
     <main>
@@ -47,7 +77,15 @@ export default function App() {
       <ShortcutHints status={state.status} />
 
       <StatusMessage state={state} />
-      {state.status === 'done' && <TranscriptView note={state.note} />}
+      {viewed && <TranscriptView note={viewed} />}
+
+      <NoteList
+        notes={notes}
+        error={notesError}
+        selectedId={viewed?.id ?? null}
+        onSelect={openNote}
+        disabled={busy}
+      />
     </main>
   )
 }

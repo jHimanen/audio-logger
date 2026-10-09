@@ -17,6 +17,7 @@ const SERVER_CODES: ReadonlySet<string> = new Set<ErrorCode>([
   'invalid_mime',
   'empty_audio',
   'validation_error',
+  'not_found',
 ])
 
 function errorFromResponse(status: number, body: string): ApiError {
@@ -37,6 +38,22 @@ export async function fetchConfig(): Promise<{ locale: string }> {
   const res = await fetch('/api/config')
   if (!res.ok) throw new ApiError('server_error')
   return res.json() as Promise<{ locale: string }>
+}
+
+/** All saved notes, newest first. */
+export async function fetchNotes(): Promise<NoteResponse[]> {
+  let res: Response
+  try {
+    res = await fetch('/api/notes')
+  } catch {
+    throw new ApiError('server_error')
+  }
+  if (!res.ok) throw errorFromResponse(res.status, await res.text())
+  return res.json() as Promise<NoteResponse[]>
+}
+
+export function audioUrl(id: string): string {
+  return `/api/notes/${encodeURIComponent(id)}/audio`
 }
 
 /**
