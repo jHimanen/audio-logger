@@ -8,6 +8,7 @@ import { Timer } from './components/Timer'
 import { TranscriptView } from './components/TranscriptView'
 import { formatDuration } from './format'
 import { useHotkeys } from './hooks/useHotkeys'
+import { useNoteEditor } from './hooks/useNoteEditor'
 import { useNotes } from './hooks/useNotes'
 import { useRecorder } from './hooks/useRecorder'
 import { t } from './i18n'
@@ -38,6 +39,9 @@ export default function App() {
     setWasActive(active)
     if (active) setSelected(null)
   }
+
+  // The editor shows its own saved copy, so `viewed` is left as is; only the list reloads.
+  const editor = useNoteEditor(viewed, reload)
 
   useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
 
@@ -77,7 +81,7 @@ export default function App() {
       <ShortcutHints status={state.status} />
 
       <StatusMessage state={state} />
-      {viewed && <TranscriptView note={viewed} />}
+      {viewed && <TranscriptView note={viewed} editor={editor} disabled={busy} />}
 
       <NoteList
         notes={notes}
