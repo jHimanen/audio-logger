@@ -69,15 +69,20 @@ Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 
 ## Stage 6 – Deployment & multi-language
 
-- [ ] Hosting target, HTTPS, secrets management
+Leading candidate: **GCP** (Cloud Run + Cloud Storage; see ARCHITECTURE.md §9).
+
+- [ ] Confirm hosting target; HTTPS, secrets management (Secret Manager if GCP)
+- [ ] Containerise backend (serves `frontend/dist`), deploy to Cloud Run
+- [ ] `NoteRepository` audio backend on Cloud Storage
 - [ ] Auth (single-user login at minimum)
 - [ ] Safari / mobile browser support (MP4/AAC input)
 - [ ] Second locale (`en`): `locales/en.json`, `prompts/en/`, per-note language selector
 
 ## Parking lot
 
-- STT bake-off: second `TranscriptionProvider` (OpenAI `gpt-transcribe`) run over stored audio,
-  compared against ElevenLabs. Only if accuracy disappoints.
+- STT bake-off: second `TranscriptionProvider` run over stored audio, compared against
+  ElevenLabs. Candidates: Google Chirp 3 (`eu` region, EU residency; natural fit if deploying
+  to GCP) or OpenAI `gpt-transcribe`. Trigger: accuracy disappoints, or GCP deployment begins.
 - Local STT provider (`whisper-rs` via PyO3) for offline/private use.
 - Streaming transcription for live text while speaking.
 - Speaker diarisation (Scribe v2 supports it) for meeting-style notes.

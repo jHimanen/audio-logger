@@ -186,13 +186,36 @@ audio-logger/
   .env.example
 ```
 
-## 9. Open questions
+## 9. Deployment (Stage 6) – GCP is a viable target
 
-- Stage 4: which Claude model and whether to stream the processed text.
-- Stage 5: SQLite first or straight to Postgres.
-- Stage 6: hosting target and auth mechanism.
+Google Cloud is the leading candidate for deployment. Assessed 2026-10-09; not yet decided.
 
-## 10. Decision log
+- **Compute:** Cloud Run, request-based billing, no minimum instance. A single-user app stays
+  inside the free tier.
+- **Audio storage:** Cloud Storage bucket replaces the `audio.webm` files in note folders.
+- **STT option:** Speech-to-Text V2 `chirp_3` supports Finnish in the `eu` multi-region with
+  automatic punctuation (no diarisation for Finnish). Batch price ~$0.18/h vs ElevenLabs
+  ~$0.22/h; the saving is negligible at expected volume. The real differentiator is **EU data
+  residency**. Google's synchronous endpoint has tight inline-audio limits, so recordings would go
+  via Cloud Storage and the async batch endpoint – which fits the storage plan above. Implemented
+  as a second `TranscriptionProvider` and compared against ElevenLabs on kept audio before
+  switching (see ROADMAP parking lot).
+- **LLM option:** Claude is available on Vertex AI at the same per-token price as Anthropic
+  direct, so there is no cost gain; the gain is single billing/IAM and EU regions. Some newer
+  Claude API features lag or are absent on Vertex; Stage 4 modes need only plain messages, so
+  this is not blocking. Model and platform are chosen when Stage 4 starts.
+- **Database:** avoid a managed Postgres instance (fixed monthly floor) until there is a reason
+  for one; SQLite on a persistent volume or Firestore first.
+- **Not a reason to change the MVP.** Every GCP service above slots into an existing seam
+  (`TranscriptionProvider`, `NoteRepository`, Stage 4 `ProcessingService`).
+
+## 10. Open questions
+
+- Stage 4: which LLM (Claude vs Gemini Flash for clean-up) and whether to stream the processed text.
+- Stage 5: SQLite, Firestore or Postgres.
+- Stage 6: confirm GCP vs alternatives; auth mechanism.
+
+## 11. Decision log
 
 | Date | Decision | Alternatives considered | Rationale |
 |------|----------|-------------------------|-----------|
@@ -212,3 +235,4 @@ audio-logger/
 | 2026-10-09 | i18n: single `APP_LOCALE`, per-locale resource files, language stored per note | Per-note selector, vendor auto-detect | Matches one user / one language today; adding a language is additive |
 | 2026-10-09 | MVP control: button + Space toggle, Escape cancels | Button only, push-to-talk | Keyboard is cheap; push-to-talk conflicts with pause/resume |
 | 2026-10-09 | Synchronous transcription in the request | Job queue + polling | Seconds of latency for minutes of audio; revisit if >30 s |
+| 2026-10-09 | GCP marked as viable deployment target (not yet decided) | Fly.io, Vercel + separate backend, VPS | Cloud Run free tier covers a single user; Chirp 3 offers EU residency for Finnish audio; Claude available on Vertex at parity pricing |
