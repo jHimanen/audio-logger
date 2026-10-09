@@ -1,7 +1,7 @@
 # Architecture
 
 > Living document. Written together during the planning stage.
-> Last updated: 2026-10-09
+> Last updated: 2026-10-09 (Stage 1 implemented)
 
 ## 1. Purpose
 
@@ -36,7 +36,8 @@ Browser (React)  --audio/webm-->  FastAPI backend  --audio-->  ElevenLabs Scribe
   backend, renders the returned transcript.
 - React chosen over vanilla TS so Stage 3 (editing) and Stage 4 (modes) need no migration.
   Overkill for the MVP; accepted trade-off.
-- Vite dev server proxies `/api` to FastAPI; in production FastAPI serves `frontend/dist`. No SSR.
+- Vite dev server proxies `/api` to FastAPI (`127.0.0.1`, not `localhost`); in production FastAPI
+  serves `frontend/dist`. No SSR.
 - **Chrome/Chromium only** until deployment. The backend still stores the browser-reported MIME
   type in `meta.json` so Safari (MP4/AAC) can be added later without a migration.
 - Controls: one large record button; **Space** toggles start/stop when focus is not in an
@@ -56,7 +57,7 @@ Browser (React)  --audio/webm-->  FastAPI backend  --audio-->  ElevenLabs Scribe
   services/      orchestration: record -> transcribe -> save
   providers/     TranscriptionProvider implementations (elevenlabs.py, fake.py for tests)
   storage/       NoteRepository implementations (filesystem.py)
-  i18n/          locale loading for backend-side strings and prompt templates
+  i18n/          locale loading for prompt templates (added with Stage 4; no backend strings before)
   ```
 
 ### 3.3 Transcription – ElevenLabs Scribe v2, behind an interface
@@ -110,8 +111,8 @@ notes/                          # gitignored; root configurable via NOTES_DIR
   the editor can replay passages.
 - `meta.json` is the future DB row; `note.md` is the document. Stage 5 maps the folder to a
   `Note` record and moves audio to blob storage.
-- `NoteRepository` interface: `save(note) -> id`, `get(id)`, `list()`. Filesystem implementation
-  in the MVP.
+- `NoteRepository` interface: `save(note, audio) -> id`, `get(id)`, `list()`. Filesystem
+  implementation in the MVP; the repository owns id uniqueness (collision -> `-2`, `-3` suffix).
 
 ## 4. Data flow (MVP)
 
@@ -236,3 +237,14 @@ Google Cloud is the leading candidate for deployment. Assessed 2026-10-09; not y
 | 2026-10-09 | MVP control: button + Space toggle, Escape cancels | Button only, push-to-talk | Keyboard is cheap; push-to-talk conflicts with pause/resume |
 | 2026-10-09 | Synchronous transcription in the request | Job queue + polling | Seconds of latency for minutes of audio; revisit if >30 s |
 | 2026-10-09 | GCP marked as viable deployment target (not yet decided) | Fly.io, Vercel + separate backend, VPS | Cloud Run free tier covers a single user; Chirp 3 offers EU residency for Finnish audio; Claude available on Vertex at parity pricing |
+| 2026-10-09 | Vendor HTTP via `httpx2` directly, not the `elevenlabs` SDK | Official SDK | One multipart POST; `httpx2` is what Starlette's `TestClient` already needs, so zero extra deps and `MockTransport` makes the provider testable offline |
+| 2026-10-09 | STT failure -> 502 `transcription_failed` with `note_id` + `path`; audio, `meta.json` (`transcription: null`) and empty `note.md` already on disk | 200 with partial Note | Keeps "2xx = full Note" one shape; the frontend localises the code and shows the saved folder |
+| 2026-10-09 | Backend errors carry a stable `code`, frontend localises via `t("error.<code>")`; no backend `i18n/` in Stage 1 | Localised messages from the backend | Backend has no user-facing strings until Stage 4 prompts |
+| 2026-10-09 | Sync everywhere: `def` routes, sync HTTP client, sync repository | async routes + `AsyncClient` | Single user; FastAPI runs sync routes in a threadpool; tests stay plain |
+| 2026-10-09 | App factory (`uvicorn audio_logger.main:create_app --factory`), no module-level `app` | Module-level `app` | `build_provider()` fails fast without an API key; a module-level app would make importing `main` (tests) fail on key-less machines |
+| 2026-10-09 | `STT_PROVIDER=fake` setting reuses the test fake | Separate mock server | Exercise the full UI in Chrome without a key or spend, no new infrastructure |
+| 2026-10-09 | Frontend package manager: pnpm; template toolchain kept (oxlint) | npm, yarn | Author preference; lint ships with the Vite template at no extra cost |
+| 2026-10-09 | No frontend unit tests in Stage 1 | Vitest + jsdom | The logic is MediaRecorder / getUserMedia glue jsdom cannot run; `tsc` + manual Chrome checklist instead; revisit at Stage 3 |
+| 2026-10-09 | Upload via `XMLHttpRequest` with `upload.onload` | `fetch` | `fetch` has no upload-complete signal for the `uploading -> transcribing` transition; XHR is ten lines, no dependency |
+| 2026-10-09 | Relative `NOTES_DIR` / `FRONTEND_DIST` resolve against the repo root | Process working directory | Matches `.env.example`; independent of where uvicorn is launched |
+| 2026-10-09 | Upload limit enforced by reading `MAX_UPLOAD_BYTES + 1` in the route | Request-body cap in the server | Caps memory and what is persisted; Starlette still spools an oversized body to a temp file before the 413, acceptable for a localhost single-user MVP |

@@ -1,7 +1,7 @@
 # Roadmap
 
 > Living document. Stages are ordered; each stage is shippable on its own.
-> Last updated: 2026-10-09
+> Last updated: 2026-10-09 (Stage 1 implemented)
 
 ## Stage 0 – Planning (current)
 
@@ -16,26 +16,26 @@ Goal: press a button (or Space), speak, press again to stop; the Finnish transcr
 in the UI and is saved as `notes/<id>/note.md` with its audio and metadata.
 
 Backend
-- [ ] `uv init` backend, FastAPI app, `pydantic-settings` config (`APP_LOCALE`, `NOTES_DIR`, `ELEVENLABS_API_KEY`)
-- [ ] `TranscriptionProvider` protocol + `FakeTranscriptionProvider`
-- [ ] `ElevenLabsProvider` (Scribe v2, `language_code=fi`)
-- [ ] `NoteRepository` protocol + filesystem implementation (folder per note, `meta.json` schema from §5)
-- [ ] `POST /api/notes` (multipart audio -> Note JSON), `GET /api/config`
-- [ ] Size/MIME validation, error responses, audio saved even when STT fails
-- [ ] Tests: service flow with fake provider and tmp dir; repository round-trip
-- [ ] Serve `frontend/dist` as static files
+- [x] `uv init` backend, FastAPI app, `pydantic-settings` config (`APP_LOCALE`, `NOTES_DIR`, `ELEVENLABS_API_KEY`)
+- [x] `TranscriptionProvider` protocol + `FakeTranscriptionProvider`
+- [x] `ElevenLabsProvider` (Scribe v2, `language_code=fi`)
+- [x] `NoteRepository` protocol + filesystem implementation (folder per note, `meta.json` schema from §5)
+- [x] `POST /api/notes` (multipart audio -> Note JSON), `GET /api/config`
+- [x] Size/MIME validation, error responses, audio saved even when STT fails
+- [x] Tests: service flow with fake provider and tmp dir; repository round-trip
+- [x] Serve `frontend/dist` as static files
 
 Frontend
-- [ ] Vite + React + TS scaffold, `/api` proxy
-- [ ] `useRecorder` hook around `MediaRecorder` (idle / recording / uploading / transcribing / done / error)
-- [ ] Record button + Space toggle + Escape cancel, recording timer
-- [ ] Transcript view (read-only) with saved path
-- [ ] `locales/fi.json` and `t()` helper; all visible strings go through it
-- [ ] Error states: mic denied, upload failed, STT failed
+- [x] Vite + React + TS scaffold, `/api` proxy
+- [x] `useRecorder` hook around `MediaRecorder` (idle / recording / uploading / transcribing / done / error)
+- [x] Record button + Space toggle + Escape cancel, recording timer
+- [x] Transcript view (read-only) with saved path
+- [x] `locales/fi.json` and `t()` helper; all visible strings go through it
+- [x] Error states: mic denied, upload failed, STT failed
 
 Repo
-- [ ] `.gitignore` (`notes/`, `.env`, `node_modules/`, `.venv/`, `dist/`)
-- [ ] `.env.example`, README with run instructions
+- [x] `.gitignore` (`notes/`, `.env`, `node_modules/`, `.venv/`, `dist/`)
+- [x] `.env.example`, README with run instructions
 
 Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 
