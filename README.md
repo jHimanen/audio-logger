@@ -58,3 +58,7 @@ cd frontend && pnpm build && pnpm lint
   `path`. Errors are `{"error": {"code": "...", "message": "...", ...}}` with codes
   `invalid_mime` (415), `too_large` (413), `empty_audio` (400), `validation_error` (422),
   `transcription_failed` (502, audio kept; body carries `note_id` and `path`).
+- `GET /api/notes` -> all notes, newest first, each in the same shape as the `POST` response.
+- `GET /api/notes/{id}` -> one note, same shape.
+- `GET /api/notes/{id}/audio` -> the recording with its stored mime type; supports `Range`.
+- Unknown ids return `not_found` (404).

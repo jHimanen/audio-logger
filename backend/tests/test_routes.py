@@ -107,3 +107,112 @@ def test_transcription_failure_returns_502_and_keeps_audio(
     folder = settings.notes_dir / error["note_id"]
     assert (folder / "audio.webm").read_bytes() == AUDIO
     assert json.loads((folder / "meta.json").read_text())["transcription"] is None
+
+
+def test_list_notes_empty(client: TestClient) -> None:
+    response = client.get("/api/notes")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_notes_newest_first(client: TestClient, settings: Settings) -> None:
+    first = post_note(client).json()
+    second = post_note(client).json()
+
+    notes = client.get("/api/notes").json()
+
+    assert [n["id"] for n in notes] == [second["id"], first["id"]]
+    for note in notes:
+        assert note["text"] == "Tämä on testi."
+        assert note["path"] == str(settings.notes_dir.resolve() / note["id"])
+        assert note["transcription"]["provider"] == "fake"
+
+
+def test_list_includes_failed_transcription(
+    settings: Settings, repo: FilesystemNoteRepository
+) -> None:
+    client = TestClient(
+        create_app(settings, provider=FakeTranscriptionProvider(error="boom"), repository=repo)
+    )
+    note_id = post_note(client).json()["error"]["note_id"]
+
+    notes = client.get("/api/notes").json()
+
+    assert [n["id"] for n in notes] == [note_id]
+    assert notes[0]["transcription"] is None
+    assert notes[0]["text"] == ""
+
+
+def test_get_note_round_trips(client: TestClient) -> None:
+    created = post_note(client).json()
+    response = client.get(f"/api/notes/{created['id']}")
+    assert response.status_code == 200
+    assert response.json() == created
+
+
+def test_get_note_not_found(client: TestClient) -> None:
+    response = client.get("/api/notes/nope")
+    assert response.status_code == 404
+    assert response.json()["error"] == {
+        "code": "not_found",
+        "message": "No note 'nope'",
+        "note_id": "nope",
+    }
+
+
+def test_get_note_rejects_traversal(client: TestClient) -> None:
+    post_note(client)
+    # httpx normalises a literal "..", so only the encoded form reaches the route.
+    response = client.get("/api/notes/%2e%2e")
+    assert response.status_code == 404
+    # note_id proves the route ran and the repository refused the id (not a routing miss).
+    assert response.json()["error"]["note_id"] == ".."
+
+
+def test_get_audio(client: TestClient) -> None:
+    note_id = post_note(client, mime="audio/webm;codecs=opus").json()["id"]
+
+    response = client.get(f"/api/notes/{note_id}/audio")
+
+    assert response.status_code == 200
+    assert response.content == AUDIO
+    assert response.headers["content-type"] == "audio/webm;codecs=opus"
+
+
+def test_get_audio_range(client: TestClient) -> None:
+    note_id = post_note(client).json()["id"]
+
+    response = client.get(f"/api/notes/{note_id}/audio", headers={"Range": "bytes=0-3"})
+
+    assert response.status_code == 206
+    assert response.headers["content-range"] == f"bytes 0-3/{len(AUDIO)}"
+    assert response.content == AUDIO[:4]
+
+
+def test_get_audio_not_found(client: TestClient) -> None:
+    response = client.get("/api/notes/nope/audio")
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_get_audio_missing_file(client: TestClient, settings: Settings) -> None:
+    note_id = post_note(client).json()["id"]
+    (settings.notes_dir / note_id / "audio.webm").unlink()
+
+    response = client.get(f"/api/notes/{note_id}/audio")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_get_audio_outside_note_folder(client: TestClient, settings: Settings) -> None:
+    note_id = post_note(client).json()["id"]
+    meta_file = settings.notes_dir / note_id / "meta.json"
+    meta = json.loads(meta_file.read_text())
+    meta["audio"]["file"] = "../../secret"
+    meta_file.write_text(json.dumps(meta))
+    (settings.notes_dir.parent / "secret").write_bytes(b"x")
+
+    response = client.get(f"/api/notes/{note_id}/audio")
+
+    assert response.status_code == 404
