@@ -126,3 +126,23 @@ kbd {
   border-radius: 4px;
   background: #fff;
 }
+
+.level-meter {
+  width: 6rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.level-meter.paused {
+  opacity: 0.4;
+}
+
+.level-meter-bar {
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 60ms linear;
+}
