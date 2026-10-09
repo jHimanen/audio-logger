@@ -52,7 +52,7 @@ export default function App() {
   useHotkeys({ onToggle: guardedToggle, onCancel: cancel, onTogglePause: togglePause })
 
   const openNote = (note: NoteResponse) => {
-    if (note.id === selected?.id) return
+    if (note.id === viewed?.id) return
     guard(() => {
       reset()
       setSelected(note)
