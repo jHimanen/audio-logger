@@ -216,3 +216,61 @@ def test_get_audio_outside_note_folder(client: TestClient, settings: Settings) -
     response = client.get(f"/api/notes/{note_id}/audio")
 
     assert response.status_code == 404
+
+
+def test_update_note(client: TestClient, settings: Settings) -> None:
+    created = post_note(client).json()
+
+    response = client.put(f"/api/notes/{created['id']}", json={"text": "Muokattu."})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "Muokattu."
+    assert body["edited_at"].endswith("Z")
+    assert body["transcription"]["raw_text"] == "Tämä on testi."
+    assert body["path"] == str(settings.notes_dir.resolve() / created["id"])
+    assert client.get(f"/api/notes/{created['id']}").json() == body
+    assert client.get("/api/notes").json()[0]["text"] == "Muokattu."
+
+
+def test_update_note_not_found(client: TestClient) -> None:
+    response = client.put("/api/notes/nope", json={"text": "x"})
+    assert response.status_code == 404
+    assert response.json()["error"] == {
+        "code": "not_found",
+        "message": "No note 'nope'",
+        "note_id": "nope",
+    }
+
+
+def test_update_note_invalid_body(client: TestClient) -> None:
+    note_id = post_note(client).json()["id"]
+    for body in ({"text": 1}, {}):
+        response = client.put(f"/api/notes/{note_id}", json=body)
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_delete_note(client: TestClient, settings: Settings) -> None:
+    note_id = post_note(client).json()["id"]
+
+    response = client.delete(f"/api/notes/{note_id}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert not (settings.notes_dir / note_id).exists()
+    assert client.get(f"/api/notes/{note_id}").status_code == 404
+
+
+def test_delete_note_not_found(client: TestClient) -> None:
+    response = client.delete("/api/notes/nope")
+    assert response.status_code == 404
+    assert response.json()["error"]["note_id"] == "nope"
+
+
+def test_delete_note_rejects_traversal(client: TestClient, settings: Settings) -> None:
+    note_id = post_note(client).json()["id"]
+    response = client.delete("/api/notes/%2e%2e")
+    assert response.status_code == 404
+    assert response.json()["error"]["note_id"] == ".."
+    assert (settings.notes_dir / note_id).is_dir()

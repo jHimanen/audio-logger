@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, File, Form, Request, Response, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from audio_logger.errors import AppError
 from audio_logger.models import Note
@@ -12,6 +13,10 @@ from audio_logger.storage.base import NoteNotFound
 router = APIRouter(prefix="/api")
 
 ALLOWED_MIME_TYPES = {"audio/webm"}
+
+
+class NoteUpdate(BaseModel):
+    text: str
 
 
 def _notes_dir(request: Request) -> Path:
@@ -76,6 +81,23 @@ def list_notes(request: Request) -> list[dict[str, Any]]:
 @router.get("/notes/{id}")
 def get_note(request: Request, id: str) -> dict[str, Any]:
     return _note_json(_load(request, id), _notes_dir(request))
+
+
+@router.put("/notes/{id}")
+def update_note(request: Request, id: str, body: NoteUpdate) -> dict[str, Any]:
+    try:
+        note = request.app.state.service.edit(id, body.text)
+    except NoteNotFound as exc:
+        raise _not_found(id) from exc
+    return _note_json(note, _notes_dir(request))
+
+
+@router.delete("/notes/{id}", status_code=204, response_class=Response)
+def delete_note(request: Request, id: str) -> None:
+    try:
+        request.app.state.service.repository.delete(id)
+    except NoteNotFound as exc:
+        raise _not_found(id) from exc
 
 
 @router.get("/notes/{id}/audio")
