@@ -17,7 +17,7 @@ const dateFormat = new Intl.DateTimeFormat(t('intl.locale'), {
 
 function preview(note: NoteResponse): string {
   if (note.transcription === null) return t('transcript.failed')
-  return note.text.split(/\s+/).join(' ').trim().slice(0, 120) || t('transcript.empty')
+  return note.text.replace(/\s+/g, ' ').trim().slice(0, 120) || t('transcript.empty')
 }
 
 export function NoteList({ notes, error, selectedId, onSelect, disabled }: Props) {

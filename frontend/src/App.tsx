@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LevelMeter } from './components/LevelMeter'
 import { NoteList } from './components/NoteList'
 import { RecordButton } from './components/RecordButton'
@@ -23,17 +23,23 @@ export default function App() {
   const busy = state.status !== 'idle' && !finished
   const viewed = state.status === 'done' ? state.note : selected
 
-  // A failed transcription still saves the audio, so reload on either outcome.
+  // A failed transcription still saves the audio, so it belongs in the list too.
+  const saved =
+    state.status === 'done' ||
+    (state.status === 'error' && state.code === 'transcription_failed')
   useEffect(() => {
-    if (finished) reload()
-  }, [finished, reload])
+    if (saved) reload()
+  }, [saved, reload])
 
-  // Starting a recording closes the opened note so its transcript isn't shown under it.
-  const toggleRecording = useCallback(() => {
-    setSelected(null)
-    toggle()
-  }, [toggle])
-  useHotkeys({ onToggle: toggleRecording, onCancel: cancel, onTogglePause: togglePause })
+  // An opened note must not show under a live recording, however the recording started.
+  // Adjusted during render (not in an effect) when `active` flips.
+  const [wasActive, setWasActive] = useState(active)
+  if (active !== wasActive) {
+    setWasActive(active)
+    if (active) setSelected(null)
+  }
+
+  useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
 
   const openNote = (note: NoteResponse) => {
     reset()
@@ -46,7 +52,7 @@ export default function App() {
       <p className="muted">{t('app.privacyNote')}</p>
 
       <div className="controls">
-        <RecordButton status={state.status} onClick={toggleRecording} />
+        <RecordButton status={state.status} onClick={toggle} />
         {state.status === 'recording' && <Timer startedAt={state.startedAt} />}
         {state.status === 'paused' && (
           <span className="timer">{formatDuration(state.elapsedMs)}</span>

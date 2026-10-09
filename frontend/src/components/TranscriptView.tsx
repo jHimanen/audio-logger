@@ -13,7 +13,12 @@ export function TranscriptView({ note }: Props) {
     <section className="transcript">
       <h2>{t('transcript.title')}</h2>
       <div className="playback">
-        <audio controls preload="none" src={audioUrl(note.id)} />
+        <audio
+          controls
+          preload="none"
+          src={audioUrl(note.id)}
+          aria-label={t('transcript.audio')}
+        />
         <span className="timer">{formatDuration(note.duration_ms)}</span>
       </div>
       {note.transcription === null ? (

@@ -15,6 +15,7 @@
   "transcript.title": "Litterointi",
   "transcript.savedTo": "Tallennettu kansioon {path}",
   "transcript.empty": "Ei tunnistettua puhetta.",
+  "transcript.audio": "Äänitys",
   "transcript.failed": "Litterointi epäonnistui.",
   "notes.title": "Muistiinpanot",
   "notes.empty": "Ei vielä muistiinpanoja.",
