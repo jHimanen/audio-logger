@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, updateNote } from '../api'
+import { ApiError, deleteNote, updateNote } from '../api'
 import { makeNote } from '../test/note'
 import type { NoteResponse } from '../types'
 import { useNoteEditor } from './useNoteEditor'
@@ -8,18 +8,24 @@ import { useNoteEditor } from './useNoteEditor'
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   updateNote: vi.fn(),
+  deleteNote: vi.fn(),
 }))
 
 const update = vi.mocked(updateNote)
+const del = vi.mocked(deleteNote)
 
 function setup(note: NoteResponse | null = makeNote()) {
   const onSaved = vi.fn()
-  const hook = renderHook(({ n }) => useNoteEditor(n, onSaved), { initialProps: { n: note } })
-  return { ...hook, onSaved }
+  const onDeleted = vi.fn()
+  const hook = renderHook(({ n }) => useNoteEditor(n, onSaved, onDeleted), {
+    initialProps: { n: note },
+  })
+  return { ...hook, onSaved, onDeleted }
 }
 
 beforeEach(() => {
   update.mockReset()
+  del.mockReset()
 })
 
 describe('useNoteEditor', () => {
@@ -132,5 +138,29 @@ describe('useNoteEditor', () => {
     expect(result.current.text).toBe('')
     expect(result.current.dirty).toBe(false)
     expect(result.current.canRestore).toBe(false)
+  })
+
+  it('deletes the note and reports it', async () => {
+    del.mockResolvedValue()
+    const { result, onDeleted } = setup()
+    await act(() => result.current.remove())
+    expect(del).toHaveBeenCalledExactlyOnceWith('2026-10-09T12-00-00Z')
+    expect(onDeleted).toHaveBeenCalledWith('2026-10-09T12-00-00Z')
+  })
+
+  it('treats a note that is already gone as deleted', async () => {
+    del.mockRejectedValue(new ApiError('not_found'))
+    const { result, onDeleted } = setup()
+    await act(() => result.current.remove())
+    expect(onDeleted).toHaveBeenCalledOnce()
+    expect(result.current.error).toBeNull()
+  })
+
+  it('reports a failed delete and keeps the note', async () => {
+    del.mockRejectedValue(new ApiError('server_error'))
+    const { result, onDeleted } = setup()
+    await act(() => result.current.remove())
+    expect(onDeleted).not.toHaveBeenCalled()
+    expect(result.current.error).toBe('server_error')
   })
 })
