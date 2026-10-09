@@ -121,7 +121,7 @@ def test_list_notes_newest_first(client: TestClient, settings: Settings) -> None
 
     notes = client.get("/api/notes").json()
 
-    assert [n["id"] for n in notes] == sorted([first["id"], second["id"]], reverse=True)
+    assert [n["id"] for n in notes] == [second["id"], first["id"]]
     for note in notes:
         assert note["text"] == "Tämä on testi."
         assert note["path"] == str(settings.notes_dir.resolve() / note["id"])
@@ -165,7 +165,8 @@ def test_get_note_rejects_traversal(client: TestClient) -> None:
     # httpx normalises a literal "..", so only the encoded form reaches the route.
     response = client.get("/api/notes/%2e%2e")
     assert response.status_code == 404
-    assert response.json()["error"]["code"] == "not_found"
+    # note_id proves the route ran and the repository refused the id (not a routing miss).
+    assert response.json()["error"]["note_id"] == ".."
 
 
 def test_get_audio(client: TestClient) -> None:
@@ -202,3 +203,16 @@ def test_get_audio_missing_file(client: TestClient, settings: Settings) -> None:
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "not_found"
+
+
+def test_get_audio_outside_note_folder(client: TestClient, settings: Settings) -> None:
+    note_id = post_note(client).json()["id"]
+    meta_file = settings.notes_dir / note_id / "meta.json"
+    meta = json.loads(meta_file.read_text())
+    meta["audio"]["file"] = "../../secret"
+    meta_file.write_text(json.dumps(meta))
+    (settings.notes_dir.parent / "secret").write_bytes(b"x")
+
+    response = client.get(f"/api/notes/{note_id}/audio")
+
+    assert response.status_code == 404

@@ -81,8 +81,10 @@ def get_note(request: Request, id: str) -> dict[str, Any]:
 @router.get("/notes/{id}/audio")
 def get_note_audio(request: Request, id: str) -> FileResponse:
     note = _load(request, id)
-    file = _notes_dir(request) / note.id / note.audio.file
+    folder = _notes_dir(request) / note.id
+    file = folder / note.audio.file
     # FileResponse raises (500) on a missing file; report it as a missing note instead.
-    if not file.is_file():
+    # audio.file comes from meta.json, so keep it inside the note folder.
+    if file.resolve().parent != folder or not file.is_file():
         raise _not_found(id)
     return FileResponse(file, media_type=note.audio.mime_type)
