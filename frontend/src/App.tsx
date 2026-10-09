@@ -95,7 +95,8 @@ export default function App() {
       <ShortcutHints status={state.status} />
 
       <StatusMessage state={state} />
-      {viewed && <TranscriptView
+      {viewed && (
+        <TranscriptView
           note={viewed}
           editor={editor}
           disabled={busy}
@@ -103,7 +104,8 @@ export default function App() {
             // Deleting also drops any draft; this confirm covers both.
             if (window.confirm(t('edit.deleteConfirm'))) void editor.remove()
           }}
-        />}
+        />
+      )}
 
       <NoteList
         notes={notes}
