@@ -15,7 +15,7 @@ export function LevelMeter({ stream, paused }: Props) {
 
   useEffect(() => {
     const ctx = new AudioContext()
-    void ctx.resume()
+    ctx.resume().catch(() => {})
     const source = ctx.createMediaStreamSource(stream)
     const analyser = ctx.createAnalyser()
     // A longer window gives a steadier RMS than the default.
