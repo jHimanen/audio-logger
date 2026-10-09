@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { ApiError, createNote } from '../api'
 import type { ErrorCode, RecorderState } from '../types'
 
 const MIME_TYPE = 'audio/webm;codecs=opus'
 
 function micErrorCode(err: unknown): ErrorCode {
-  const name = err instanceof DOMException ? err.name : ''
-  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'mic_denied'
-  return 'mic_unavailable'
+  return err instanceof DOMException && err.name === 'NotAllowedError'
+    ? 'mic_denied'
+    : 'mic_unavailable'
 }
 
 export interface Recorder {
@@ -21,17 +21,17 @@ export interface Recorder {
 
 export function useRecorder(): Recorder {
   const [state, setState] = useState<RecorderState>({ status: 'idle' })
-  // Mirror of state.status so the stable callbacks below can read the latest value.
-  const statusRef = useRef(state.status)
-  useEffect(() => {
-    statusRef.current = state.status
-  }, [state.status])
-
+  // Mirror of state.status, written synchronously so the stable callbacks below never
+  // read a stale value between a transition and the next render.
+  const statusRef = useRef<RecorderState['status']>('idle')
   const recorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const startedAtRef = useRef(0)
   const cancelledRef = useRef(false)
   const startingRef = useRef(false)
+
+  const transition = useCallback((next: RecorderState) => {
+    statusRef.current = next.status
+    setState(next)
+  }, [])
 
   const start = useCallback(async () => {
     if (statusRef.current !== 'idle' || startingRef.current) return
@@ -40,7 +40,7 @@ export function useRecorder(): Recorder {
       !MediaRecorder.isTypeSupported(MIME_TYPE) ||
       !navigator.mediaDevices?.getUserMedia
     ) {
-      setState({ status: 'error', code: 'recorder_unsupported' })
+      transition({ status: 'error', code: 'recorder_unsupported' })
       return
     }
 
@@ -49,51 +49,56 @@ export function useRecorder(): Recorder {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (err) {
-      setState({ status: 'error', code: micErrorCode(err) })
+      transition({ status: 'error', code: micErrorCode(err) })
       return
     } finally {
       startingRef.current = false
     }
 
-    const recorder = new MediaRecorder(stream, { mimeType: MIME_TYPE })
-    chunksRef.current = []
+    const chunks: Blob[] = []
+    let recorder: MediaRecorder
+    try {
+      recorder = new MediaRecorder(stream, { mimeType: MIME_TYPE })
+      recorder.start()
+    } catch {
+      stream.getTracks().forEach((track) => track.stop())
+      transition({ status: 'error', code: 'recorder_unsupported' })
+      return
+    }
+    const startedAt = performance.now()
     cancelledRef.current = false
+    recorderRef.current = recorder
 
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data)
+      if (e.data.size > 0) chunks.push(e.data)
     }
     recorder.onstop = () => {
       // Always release the mic so Chrome's recording indicator clears.
       stream.getTracks().forEach((track) => track.stop())
       recorderRef.current = null
-      const chunks = chunksRef.current
-      chunksRef.current = []
 
       if (cancelledRef.current) {
-        setState({ status: 'idle' })
+        transition({ status: 'idle' })
         return
       }
 
       // MediaRecorder's WebM carries no duration header, so measure it here.
-      const durationMs = Math.round(performance.now() - startedAtRef.current)
+      const durationMs = Math.round(performance.now() - startedAt)
       const blob = new Blob(chunks, { type: recorder.mimeType })
-      setState({ status: 'uploading' })
-      createNote(blob, recorder.mimeType, durationMs, () => setState({ status: 'transcribing' }))
-        .then((note) => setState({ status: 'done', note }))
+      transition({ status: 'uploading' })
+      createNote(blob, recorder.mimeType, durationMs, () => transition({ status: 'transcribing' }))
+        .then((note) => transition({ status: 'done', note }))
         .catch((err: unknown) => {
           if (err instanceof ApiError) {
-            setState({ status: 'error', code: err.code, path: err.path })
+            transition({ status: 'error', code: err.code, path: err.path })
           } else {
-            setState({ status: 'error', code: 'unknown' })
+            transition({ status: 'error', code: 'unknown' })
           }
         })
     }
 
-    recorder.start()
-    recorderRef.current = recorder
-    startedAtRef.current = performance.now()
-    setState({ status: 'recording', startedAt: startedAtRef.current })
-  }, [])
+    transition({ status: 'recording', startedAt })
+  }, [transition])
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current
@@ -115,9 +120,9 @@ export function useRecorder(): Recorder {
 
   const reset = useCallback(() => {
     if (statusRef.current === 'done' || statusRef.current === 'error') {
-      setState({ status: 'idle' })
+      transition({ status: 'idle' })
     }
-  }, [])
+  }, [transition])
 
   return { state, start, stop, cancel, toggle, reset }
 }
