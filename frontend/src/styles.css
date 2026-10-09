@@ -112,3 +112,17 @@ h1 {
   background: #fff;
   cursor: pointer;
 }
+
+.record-button.paused {
+  background: var(--accent-active);
+}
+
+kbd {
+  font: inherit;
+  font-size: 0.85em;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #fff;
+}

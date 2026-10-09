@@ -10,23 +10,36 @@ function micErrorCode(err: unknown): ErrorCode {
     : 'mic_unavailable'
 }
 
+function isActive(status: RecorderState['status']): boolean {
+  return status === 'recording' || status === 'paused'
+}
+
 export interface Recorder {
   state: RecorderState
+  /** The live mic stream while recording or paused, else null. */
+  stream: MediaStream | null
   start: () => Promise<void>
   stop: () => void
   cancel: () => void
+  pause: () => void
+  resume: () => void
+  togglePause: () => void
   toggle: () => void
   reset: () => void
 }
 
 export function useRecorder(): Recorder {
   const [state, setState] = useState<RecorderState>({ status: 'idle' })
+  const [stream, setStream] = useState<MediaStream | null>(null)
   // Mirror of state.status, written synchronously so the stable callbacks below never
   // read a stale value between a transition and the next render.
   const statusRef = useRef<RecorderState['status']>('idle')
   const recorderRef = useRef<MediaRecorder | null>(null)
   const cancelledRef = useRef(false)
   const startingRef = useRef(false)
+  // Virtual start (now minus active time) while recording; active time while paused.
+  const startedAtRef = useRef(0)
+  const pausedElapsedRef = useRef<number | null>(null)
 
   const transition = useCallback((next: RecorderState) => {
     statusRef.current = next.status
@@ -65,9 +78,11 @@ export function useRecorder(): Recorder {
       transition({ status: 'error', code: 'recorder_unsupported' })
       return
     }
-    const startedAt = performance.now()
+    startedAtRef.current = performance.now()
+    pausedElapsedRef.current = null
     cancelledRef.current = false
     recorderRef.current = recorder
+    setStream(stream)
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunks.push(e.data)
@@ -75,6 +90,7 @@ export function useRecorder(): Recorder {
     recorder.onstop = () => {
       // Always release the mic so Chrome's recording indicator clears.
       stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
       recorderRef.current = null
 
       if (cancelledRef.current) {
@@ -82,8 +98,11 @@ export function useRecorder(): Recorder {
         return
       }
 
-      // MediaRecorder's WebM carries no duration header, so measure it here.
-      const durationMs = Math.round(performance.now() - startedAt)
+      // MediaRecorder's WebM carries no duration header, so measure it here. Paused time is
+      // excluded: the recorder captures nothing while paused.
+      const durationMs = Math.round(
+        pausedElapsedRef.current ?? performance.now() - startedAtRef.current,
+      )
       const blob = new Blob(chunks, { type: recorder.mimeType })
       transition({ status: 'uploading' })
       createNote(blob, recorder.mimeType, durationMs, () => transition({ status: 'transcribing' }))
@@ -97,25 +116,49 @@ export function useRecorder(): Recorder {
         })
     }
 
-    transition({ status: 'recording', startedAt })
+    transition({ status: 'recording', startedAt: startedAtRef.current })
   }, [transition])
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current
-    if (statusRef.current !== 'recording' || !recorder || recorder.state === 'inactive') return
+    if (!isActive(statusRef.current) || !recorder || recorder.state === 'inactive') return
     recorder.stop()
   }, [])
 
   const cancel = useCallback(() => {
     const recorder = recorderRef.current
-    if (statusRef.current !== 'recording' || !recorder || recorder.state === 'inactive') return
+    if (!isActive(statusRef.current) || !recorder || recorder.state === 'inactive') return
     cancelledRef.current = true
     recorder.stop()
   }, [])
 
+  const pause = useCallback(() => {
+    const recorder = recorderRef.current
+    if (statusRef.current !== 'recording' || recorder?.state !== 'recording') return
+    const elapsedMs = performance.now() - startedAtRef.current
+    recorder.pause()
+    pausedElapsedRef.current = elapsedMs
+    transition({ status: 'paused', elapsedMs })
+  }, [transition])
+
+  const resume = useCallback(() => {
+    const recorder = recorderRef.current
+    const elapsedMs = pausedElapsedRef.current
+    if (statusRef.current !== 'paused' || recorder?.state !== 'paused' || elapsedMs === null) return
+    recorder.resume()
+    startedAtRef.current = performance.now() - elapsedMs
+    pausedElapsedRef.current = null
+    transition({ status: 'recording', startedAt: startedAtRef.current })
+  }, [transition])
+
+  const togglePause = useCallback(() => {
+    if (statusRef.current === 'recording') pause()
+    else if (statusRef.current === 'paused') resume()
+  }, [pause, resume])
+
   const toggle = useCallback(() => {
     if (statusRef.current === 'idle') void start()
-    else if (statusRef.current === 'recording') stop()
+    else if (isActive(statusRef.current)) stop()
   }, [start, stop])
 
   const reset = useCallback(() => {
@@ -124,5 +167,5 @@ export function useRecorder(): Recorder {
     }
   }, [transition])
 
-  return { state, start, stop, cancel, toggle, reset }
+  return { state, stream, start, stop, cancel, pause, resume, togglePause, toggle, reset }
 }

@@ -9,6 +9,8 @@ export function StatusMessage({ state }: Props) {
   switch (state.status) {
     case 'recording':
       return <p className="status">{t('status.recording')}</p>
+    case 'paused':
+      return <p className="status">{t('status.paused')}</p>
     case 'uploading':
       return <p className="status">{t('status.uploading')}</p>
     case 'transcribing':

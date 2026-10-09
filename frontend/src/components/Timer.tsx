@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react'
+import { formatDuration } from '../format'
 
 interface Props {
-  /** performance.now() at the moment recording started. */
+  /** performance.now() at the moment recording started, shifted forward by any pauses. */
   startedAt: number
-}
-
-function format(ms: number): string {
-  const total = Math.floor(ms / 1000)
-  const minutes = Math.floor(total / 60)
-  const seconds = total % 60
-  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
 export function Timer({ startedAt }: Props) {
@@ -22,7 +16,7 @@ export function Timer({ startedAt }: Props) {
 
   return (
     <span className="timer">
-      {format(elapsed)}
+      {formatDuration(elapsed)}
     </span>
   )
 }
