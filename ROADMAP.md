@@ -1,7 +1,7 @@
 # Roadmap
 
 > Living document. Stages are ordered; each stage is shippable on its own.
-> Last updated: 2026-10-09 (Stage 2 implemented)
+> Last updated: 2026-10-09 (Stage 3 implemented)
 
 ## Stage 0 – Planning 
 
@@ -46,14 +46,16 @@ Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 - [x] Level meter (Web Audio `AnalyserNode`) so the user sees the mic is live
 - [x] Note list in the UI (`GET /api/notes`), open an existing note, replay its audio
 
-## Stage 3 – Editing (current)
+## Stage 3 – Editing
 
-- [ ] Editable transcript before and after saving (`PUT /api/notes/{id}`)
-- [ ] `raw_text` stays immutable in `meta.json`; `note.md` holds the edited text; `edited_at` set
-- [ ] Unsaved-changes guard
-- [ ] Delete note (removes the folder)
+- [x] Editable transcript before and after saving (`PUT /api/notes/{id}`)
+- [x] `raw_text` stays immutable in `meta.json`; `note.md` holds the edited text; `edited_at` set
+- [x] Unsaved-changes guard
+- [x] Delete note (removes the folder)
+- [x] Extra: restore the original transcript into the editor
+- [x] Extra: frontend unit tests (Vitest + jsdom + Testing Library)
 
-## Stage 4 – Post-processing modes (Claude)
+## Stage 4 – Post-processing modes (Claude) (current)
 
 - [ ] Mode framework: `backend/prompts/<locale>/<mode>.md` + manifest; `ProcessingService`
 - [ ] First modes for `fi`: `cleanup` (fillers, punctuation, paragraphs), `summary`, `bullets`
@@ -89,4 +91,6 @@ Leading candidate: **GCP** (Cloud Run + Cloud Storage; see ARCHITECTURE.md §9).
 - WebM duration/cues header so the player shows a length and can seek (MediaRecorder omits
   it; fix by rewriting the header on save or in the browser).
 - `FilesystemNoteRepository.list()` fails the whole list on one corrupt `meta.json`; skip and
-  log bad entries instead.
+  log bad entries instead. Same fix: a symlinked folder inside `notes/` makes `DELETE` return
+  500 (`rmtree` refuses symlinks); reject symlinks in `_folder()` together with this.
+- Cmd/Ctrl+S to save from the editor.

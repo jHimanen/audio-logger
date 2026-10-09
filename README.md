@@ -48,14 +48,20 @@ and the UI shows the folder.
 Saved notes are listed below the recorder, newest first. Click one to read its transcript and
 replay the audio (seeking does not work yet: MediaRecorder's WebM has no duration header).
 
+The transcript is editable, both right after recording and on an opened note. **Tallenna** saves
+it to `note.md` (the original stays in `meta.json` as `raw_text`); **Palauta alkuperäinen** puts
+the original back as an unsaved draft. Unsaved edits are guarded: starting a recording, opening
+another note, "Uusi äänitys" or closing the tab asks first. **Poista** deletes the note and its
+folder after a confirm.
+
 ## Checks
 
 ```bash
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
-cd frontend && pnpm build && pnpm lint
+cd frontend && pnpm test && pnpm build && pnpm lint
 ```
 
-Manual Chrome checklist (no frontend unit tests; run with `STT_PROVIDER=fake`):
+Manual Chrome checklist (recording glue has no unit tests; run with `STT_PROVIDER=fake`):
 
 1. Space starts; P pauses (timer freezes, status "Tauko.", button "Jatka"); P resumes from the
    frozen value; Space stops. The saved duration matches the player: pauses add no silence.
@@ -66,6 +72,15 @@ Manual Chrome checklist (no frontend unit tests; run with `STT_PROVIDER=fake`):
 6. After saving, the new note heads the list; a failed transcription also appears, marked.
 7. Open an old note: transcript and player appear. Space with the player focused plays audio;
    Space elsewhere starts a new recording and closes the note. The list is disabled meanwhile.
+8. Edit a transcript, Tallenna: the list preview updates and "Muokattu …" appears; `note.md` has
+   the edit, `meta.json` has `edited_at` and the original `raw_text`; a reload keeps the edit.
+   Palauta alkuperäinen loads the raw text as an unsaved draft. A failed note can be typed and
+   saved.
+9. With unsaved edits, Space (focus outside the textarea), a list click and "Uusi äänitys" each
+   ask first; Cancel keeps the draft. Reloading the tab prompts. After saving, nothing prompts.
+10. Poista: Cancel changes nothing; OK closes the editor, drops the note from the list and
+    removes its folder, from the fresh view and from an opened note, with one confirm even
+    when there are unsaved edits.
 
 ## API
 
@@ -77,4 +92,7 @@ Manual Chrome checklist (no frontend unit tests; run with `STT_PROVIDER=fake`):
 - `GET /api/notes` -> all notes, newest first, each in the same shape as the `POST` response.
 - `GET /api/notes/{id}` -> one note, same shape.
 - `GET /api/notes/{id}/audio` -> the recording with its stored mime type; supports `Range`.
+- `PUT /api/notes/{id}` JSON `{"text": "..."}` -> `200` note JSON; replaces `note.md`, sets
+  `edited_at`, leaves `transcription.raw_text` and the audio untouched. Bad body -> `422`.
+- `DELETE /api/notes/{id}` -> `204`; removes the note folder including its audio.
 - Unknown ids return `not_found` (404).

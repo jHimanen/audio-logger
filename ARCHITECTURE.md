@@ -1,7 +1,7 @@
 # Architecture
 
 > Living document. Written together during the planning stage.
-> Last updated: 2026-10-09 (Stage 1 implemented)
+> Last updated: 2026-10-09 (Stage 3 implemented)
 
 ## 1. Purpose
 
@@ -47,6 +47,13 @@ Browser (React)  --audio/webm-->  FastAPI backend  --audio-->  ElevenLabs Scribe
   A per-state hint line shows the keys. A level meter (`AnalyserNode`) shows the mic is live.
 - Note list below the recorder (`GET /api/notes`); opening a note shows its transcript and an
   `<audio>` player on `GET /api/notes/{id}/audio`. Selection is in-memory, no router.
+- Editing: the transcript is a textarea, for the fresh transcript and for an opened note alike
+  (both are already saved). **Tallenna** sends `PUT /api/notes/{id}`; **Palauta alkuperäinen**
+  loads `raw_text` back as an unsaved draft; **Poista** deletes after one confirm. Draft state
+  lives in `useNoteEditor`, owned by `App`. While the draft is dirty, `beforeunload` prompts and
+  starting a recording, opening another note or "Uusi äänitys" asks first (`useUnsavedGuard`).
+- Unit tests: Vitest + jsdom + Testing Library for hooks and the API client. Recording glue
+  (`MediaRecorder`, `getUserMedia`) stays on the manual Chrome checklist.
 - UI state machine: `idle -> recording -> (paused <-> recording) -> uploading -> transcribing -> done | error`.
 
 ### 3.2 Backend – Python 3.12+ / FastAPI
@@ -115,8 +122,10 @@ notes/                          # gitignored; root configurable via NOTES_DIR
   the editor can replay passages.
 - `meta.json` is the future DB row; `note.md` is the document. Stage 5 maps the folder to a
   `Note` record and moves audio to blob storage.
-- `NoteRepository` interface: `save(note, audio) -> id`, `get(id)`, `list()`. Filesystem
-  implementation in the MVP; the repository owns id uniqueness (collision -> `-2`, `-3` suffix).
+- `NoteRepository` interface: `save(note, audio) -> id`, `get(id)`, `list()`, `update(note)`
+  (rewrites `note.md` and `meta.json`, never audio), `delete(id)` (removes the folder).
+  Filesystem implementation in the MVP; the repository owns id uniqueness (collision -> `-2`,
+  `-3` suffix) and rejects ids that resolve outside `NOTES_DIR`.
 - The audio route derives the file from the folder layout (`NOTES_DIR/<id>/<audio.file>`), as
   the routes already do for `path`; the interface has no audio accessor. Stage 5 changes both.
 - Known limitation: MediaRecorder's WebM has no duration/cues header, so Chrome's player shows
@@ -156,10 +165,12 @@ transcribes in seconds; if that ever exceeds ~30 s, switch to a job + polling pa
     "completed_at": "2026-10-09T14:32:09Z"
   },
   "processing": null,             // Stage 4: { "mode": "cleanup", "model": "...", "at": "..." }
-  "edited_at": null                // Stage 3
+  "edited_at": null                // set on every PUT /api/notes/{id}
 }
 ```
-- `note.md` holds the current user-facing text. In the MVP it equals `raw_text`.
+- `note.md` holds the current user-facing text. It equals `raw_text` until the first edit;
+  after that it may differ, and `edited_at` records the last save. A note whose transcription
+  failed (`transcription: null`) can still be given text by hand.
 - Invariants: `raw_text` and `audio.webm` are immutable; everything else may change.
 
 ## 6. Internationalisation
@@ -264,3 +275,12 @@ Google Cloud is the leading candidate for deployment. Assessed 2026-10-09; not y
 | 2026-10-09 | `LevelMeter` owns its `AudioContext` and rAF loop and writes `style.transform` through a ref | Hook + React state per frame | One owner, no re-render per frame, StrictMode-safe cleanup |
 | 2026-10-09 | Note selection is in-memory state, no router | React Router + SPA fallback | Single user, no deep-link need; the backend has no SPA fallback |
 | 2026-10-09 | `"strict": true` in the frontend tsconfig | Default (non-strict) | The "tsc instead of frontend tests" decision assumes strict checking |
+| 2026-10-09 | Frontend unit tests with Vitest + jsdom + Testing Library (supersedes the Stage 1 "no frontend unit tests") | Keep tsc-only | Stage 3 logic (editor, guard, API client) is plain state + fetch that jsdom runs; recording glue stays manual |
+| 2026-10-09 | `PUT /api/notes/{id}` with JSON `{"text"}`, returns the full note | PATCH; multipart | `text` is the only mutable field; keeps "2xx = full Note" one shape |
+| 2026-10-09 | `edited_at` set on every PUT; `raw_text` never touched; PUT allowed on `transcription: null` notes | Clear `edited_at` when text equals raw; reject failed notes | Simple; lets a failed note be typed by hand since its audio is kept |
+| 2026-10-09 | `NoteRepository.update(note)` / `delete(id)`; `NoteService.edit()` sets `edited_at`; DELETE route calls the repository directly | `update_text(id, text)`; service passthrough for delete | Repository stays dumb and maps 1:1 to UPDATE/DELETE at Stage 5; timestamping is orchestration; one-line delegations add nothing |
+| 2026-10-09 | Explicit Save, editor always editable; dirty = draft differs from the saved text | Autosave | The roadmap's unsaved-changes guard only makes sense with explicit save |
+| 2026-10-09 | Guard = `beforeunload` while dirty + `window.confirm` before draft-dropping actions; delete has its own single confirm | Inline confirm UI | Single-user local app; a few lines instead of a component |
+| 2026-10-09 | Delete only from the viewed note; a 404 on delete counts as deleted | Delete in list rows | One place, one confirmation path; the note is gone either way |
+| 2026-10-09 | Restore original = load `raw_text` into the draft, saved explicitly | Server-side restore endpoint | No new route; same save path as any edit |
+| 2026-10-09 | Editor shows its own saved copy after a save; `App` keeps `viewed` unchanged | Replace `selected` with the saved note | Replacing the object would reset the editor and drop text typed during the save; `state.note` in the done state is stale anyway |
