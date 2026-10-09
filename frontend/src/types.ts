@@ -43,7 +43,9 @@ export type ErrorCode =
 
 export type RecorderState =
   | { status: 'idle' }
+  /** startedAt is a virtual start: performance.now() minus active time so far, pauses excluded. */
   | { status: 'recording'; startedAt: number }
+  | { status: 'paused'; elapsedMs: number }
   | { status: 'uploading' }
   | { status: 'transcribing' }
   | { status: 'done'; note: NoteResponse }

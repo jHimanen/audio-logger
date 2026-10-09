@@ -7,11 +7,11 @@ interface Props {
 }
 
 export function RecordButton({ status, onClick }: Props) {
-  const recording = status === 'recording'
+  const recording = status === 'recording' || status === 'paused'
   return (
     <button
       type="button"
-      className={recording ? 'record-button recording' : 'record-button'}
+      className={recording ? `record-button ${status}` : 'record-button'}
       onClick={onClick}
       disabled={status !== 'idle' && !recording}
       aria-pressed={recording}
