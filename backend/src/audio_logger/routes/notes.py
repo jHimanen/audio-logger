@@ -1,13 +1,36 @@
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi.responses import FileResponse
 
 from audio_logger.errors import AppError
+from audio_logger.models import Note
 from audio_logger.services.notes import TranscriptionFailed
+from audio_logger.storage.base import NoteNotFound
 
 router = APIRouter(prefix="/api")
 
 ALLOWED_MIME_TYPES = {"audio/webm"}
+
+
+def _notes_dir(request: Request) -> Path:
+    return request.app.state.settings.notes_dir.resolve()
+
+
+def _note_json(note: Note, notes_dir: Path) -> dict[str, Any]:
+    return note.model_dump(mode="json") | {"path": str(notes_dir / note.id)}
+
+
+def _not_found(id: str) -> AppError:
+    return AppError(404, "not_found", f"No note {id!r}", note_id=id)
+
+
+def _load(request: Request, id: str) -> Note:
+    try:
+        return request.app.state.service.repository.get(id)
+    except NoteNotFound as exc:
+        raise _not_found(id) from exc
 
 
 @router.post("/notes", status_code=201)
@@ -30,7 +53,7 @@ def create_note(
     if not data:
         raise AppError(400, "empty_audio", "Audio is empty")
 
-    notes_dir = settings.notes_dir.resolve()
+    notes_dir = _notes_dir(request)
     try:
         note = request.app.state.service.create(data, mime_type, duration_ms)
     except TranscriptionFailed as exc:
@@ -41,4 +64,25 @@ def create_note(
             note_id=exc.note_id,
             path=str(notes_dir / exc.note_id),
         ) from exc
-    return note.model_dump(mode="json") | {"path": str(notes_dir / note.id)}
+    return _note_json(note, notes_dir)
+
+
+@router.get("/notes")
+def list_notes(request: Request) -> list[dict[str, Any]]:
+    notes_dir = _notes_dir(request)
+    return [_note_json(note, notes_dir) for note in request.app.state.service.repository.list()]
+
+
+@router.get("/notes/{id}")
+def get_note(request: Request, id: str) -> dict[str, Any]:
+    return _note_json(_load(request, id), _notes_dir(request))
+
+
+@router.get("/notes/{id}/audio")
+def get_note_audio(request: Request, id: str) -> FileResponse:
+    note = _load(request, id)
+    file = _notes_dir(request) / note.id / note.audio.file
+    # FileResponse raises (500) on a missing file; report it as a missing note instead.
+    if not file.is_file():
+        raise _not_found(id)
+    return FileResponse(file, media_type=note.audio.mime_type)
