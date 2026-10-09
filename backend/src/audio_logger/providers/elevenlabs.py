@@ -1,6 +1,6 @@
 import logging
 
-import httpx
+import httpx2 as httpx
 
 from audio_logger.models import utcnow
 from audio_logger.providers.base import Transcript, TranscriptionError
@@ -32,13 +32,17 @@ class ElevenLabsProvider:
                 },
             )
             response.raise_for_status()
-            text = response.json()["text"]
+            body = response.json()
         except httpx.HTTPStatusError as exc:
             log.error("ElevenLabs STT failed: %s %s", exc.response.status_code, exc.response.text)
             raise TranscriptionError(f"ElevenLabs returned {exc.response.status_code}") from exc
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             log.error("ElevenLabs STT failed: %r", exc)
             raise TranscriptionError(str(exc)) from exc
+        text = body.get("text") if isinstance(body, dict) else None
+        if not isinstance(text, str):
+            log.error("ElevenLabs STT response has no text field: %.200r", body)
+            raise TranscriptionError("ElevenLabs response has no text field")
         return Transcript(
             text=text,
             language=language,
