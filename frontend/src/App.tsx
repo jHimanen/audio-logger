@@ -1,3 +1,4 @@
+import { LevelMeter } from './components/LevelMeter'
 import { RecordButton } from './components/RecordButton'
 import { ShortcutHints } from './components/ShortcutHints'
 import { StatusMessage } from './components/StatusMessage'
@@ -9,10 +10,11 @@ import { useRecorder } from './hooks/useRecorder'
 import { t } from './i18n'
 
 export default function App() {
-  const { state, toggle, cancel, togglePause, reset } = useRecorder()
+  const { state, stream, toggle, cancel, togglePause, reset } = useRecorder()
   useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
 
   const finished = state.status === 'done' || state.status === 'error'
+  const active = state.status === 'recording' || state.status === 'paused'
 
   return (
     <main>
@@ -25,7 +27,7 @@ export default function App() {
         {state.status === 'paused' && (
           <span className="timer">{formatDuration(state.elapsedMs)}</span>
         )}
-        {(state.status === 'recording' || state.status === 'paused') && (
+        {active && (
           <button
             type="button"
             className="secondary-button"
@@ -35,6 +37,7 @@ export default function App() {
             {state.status === 'paused' ? t('record.resume') : t('record.pause')}
           </button>
         )}
+        {active && stream && <LevelMeter stream={stream} paused={state.status === 'paused'} />}
         {finished && (
           <button type="button" className="secondary-button" onClick={reset}>
             {t('action.newRecording')}
