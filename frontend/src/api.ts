@@ -60,10 +60,14 @@ export function createNote(
     xhr.open('POST', '/api/notes')
     xhr.upload.onload = () => onUploaded?.()
     xhr.onload = () => {
-      if (xhr.status === 201) {
-        resolve(JSON.parse(xhr.responseText) as NoteResponse)
-      } else {
+      if (xhr.status !== 201) {
         reject(errorFromResponse(xhr.status, xhr.responseText))
+        return
+      }
+      try {
+        resolve(JSON.parse(xhr.responseText) as NoteResponse)
+      } catch {
+        reject(new ApiError('unknown'))
       }
     }
     xhr.onerror = () => reject(new ApiError('upload_failed'))

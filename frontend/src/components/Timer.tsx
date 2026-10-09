@@ -21,7 +21,7 @@ export function Timer({ startedAt }: Props) {
   }, [startedAt])
 
   return (
-    <span className="timer" aria-live="off">
+    <span className="timer">
       {format(elapsed)}
     </span>
   )

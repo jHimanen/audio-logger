@@ -7,7 +7,6 @@
   "status.recording": "Äänitetään…",
   "status.uploading": "Lähetetään…",
   "status.transcribing": "Litteroidaan…",
-  "status.done": "Tallennettu.",
   "transcript.title": "Litterointi",
   "transcript.savedTo": "Tallennettu kansioon {path}",
   "transcript.empty": "Ei tunnistettua puhetta.",
