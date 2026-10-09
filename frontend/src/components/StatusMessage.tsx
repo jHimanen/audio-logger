@@ -13,8 +13,6 @@ export function StatusMessage({ state }: Props) {
       return <p className="status">{t('status.uploading')}</p>
     case 'transcribing':
       return <p className="status">{t('status.transcribing')}</p>
-    case 'done':
-      return <p className="status">{t('status.done')}</p>
     case 'error':
       return (
         <p className="status error" role="alert">
@@ -22,6 +20,7 @@ export function StatusMessage({ state }: Props) {
         </p>
       )
     case 'idle':
+    case 'done':
       return null
   }
 }
