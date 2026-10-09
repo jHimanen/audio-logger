@@ -80,6 +80,14 @@ def test_missing_duration_is_validation_error(client: TestClient) -> None:
     assert error["detail"][0]["loc"] == ["body", "duration_ms"]
 
 
+def test_audio_as_text_field_is_validation_error(client: TestClient) -> None:
+    response = client.post(
+        "/api/notes", data={"audio": "abc", "mime_type": "audio/webm", "duration_ms": "1"}
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
 def test_negative_duration_is_validation_error(client: TestClient) -> None:
     assert post_note(client, duration_ms="-1").status_code == 422
 

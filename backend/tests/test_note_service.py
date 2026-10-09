@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 
 import pytest
 
@@ -31,14 +32,20 @@ def test_create_transcribes_and_saves(
 
 
 def test_returned_note_carries_final_id(
-    fake_provider: FakeTranscriptionProvider, repo: FilesystemNoteRepository
+    fake_provider: FakeTranscriptionProvider,
+    repo: FilesystemNoteRepository,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    frozen = datetime(2026, 10, 9, 14, 32, 5, tzinfo=UTC)
+    monkeypatch.setattr("audio_logger.services.notes.utcnow", lambda: frozen)
     service = NoteService(fake_provider, repo, "fi")
+
     first = service.create(AUDIO, "audio/webm", 1)
-    second = service.create(AUDIO, "audio/webm", 1)  # same second -> same wanted id
-    if second.id != first.id:
-        assert second.id.startswith(first.id[:19])  # crossed a second boundary; nothing to assert
-    assert repo.get(second.id) == second
+    second = service.create(AUDIO, "audio/webm", 1)
+
+    assert first.id == "2026-10-09T14-32-05Z"
+    assert second.id == f"{first.id}-2"
+    assert repo.get(second.id).id == second.id
 
 
 def test_transcription_failure_still_saves_audio(repo: FilesystemNoteRepository) -> None:

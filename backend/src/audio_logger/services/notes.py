@@ -45,4 +45,4 @@ class NoteService:
             text=transcript.text,
         )
         saved_id = self.repository.save(note, audio)
-        return note if saved_id == note.id else note.model_copy(update={"id": saved_id})
+        return note.model_copy(update={"id": saved_id})
