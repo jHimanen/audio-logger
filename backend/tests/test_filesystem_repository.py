@@ -98,8 +98,9 @@ def test_missing_note_raises(repo: FilesystemNoteRepository) -> None:
     repo.root.mkdir()
     with pytest.raises(NoteNotFound):
         repo.get("nope")
-    with pytest.raises(NoteNotFound):
-        repo.get("../outside")
+    for escaping in ("..", "../outside", "/etc", ""):
+        with pytest.raises(NoteNotFound):
+            repo.get(escaping)
 
 
 def test_failed_transcription_saved_as_null(repo: FilesystemNoteRepository) -> None:
