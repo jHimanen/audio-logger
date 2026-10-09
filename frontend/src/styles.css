@@ -1,0 +1,114 @@
+:root {
+  --fg: #1a1a1a;
+  --muted: #666;
+  --bg: #fafafa;
+  --accent: #c62828;
+  --accent-active: #8e0000;
+  --border: #ddd;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+}
+
+.record-button {
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.record-button:hover:not(:disabled) {
+  background: var(--accent-active);
+}
+
+.record-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.record-button.recording {
+  background: var(--accent-active);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+}
+
+.status {
+  margin: 0.5rem 0;
+}
+
+.status.error {
+  color: var(--accent);
+}
+
+.transcript {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.transcript h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.transcript-text {
+  white-space: pre-wrap;
+}
+
+.saved-to {
+  word-break: break-all;
+}
+
+.secondary-button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
