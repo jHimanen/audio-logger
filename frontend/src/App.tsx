@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useState } from 'react'
 import { LevelMeter } from './components/LevelMeter'
+import { NoteList } from './components/NoteList'
 import { RecordButton } from './components/RecordButton'
 import { ShortcutHints } from './components/ShortcutHints'
 import { StatusMessage } from './components/StatusMessage'
@@ -6,15 +8,37 @@ import { Timer } from './components/Timer'
 import { TranscriptView } from './components/TranscriptView'
 import { formatDuration } from './format'
 import { useHotkeys } from './hooks/useHotkeys'
+import { useNotes } from './hooks/useNotes'
 import { useRecorder } from './hooks/useRecorder'
 import { t } from './i18n'
+import type { NoteResponse } from './types'
 
 export default function App() {
   const { state, stream, toggle, cancel, togglePause, reset } = useRecorder()
-  useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
+  const { notes, error: notesError, reload } = useNotes()
+  const [selected, setSelected] = useState<NoteResponse | null>(null)
 
   const finished = state.status === 'done' || state.status === 'error'
   const active = state.status === 'recording' || state.status === 'paused'
+  const busy = state.status !== 'idle' && !finished
+  const viewed = state.status === 'done' ? state.note : selected
+
+  // A failed transcription still saves the audio, so reload on either outcome.
+  useEffect(() => {
+    if (finished) reload()
+  }, [finished, reload])
+
+  // Starting a recording closes the opened note so its transcript isn't shown under it.
+  const toggleRecording = useCallback(() => {
+    setSelected(null)
+    toggle()
+  }, [toggle])
+  useHotkeys({ onToggle: toggleRecording, onCancel: cancel, onTogglePause: togglePause })
+
+  const openNote = (note: NoteResponse) => {
+    reset()
+    setSelected(note)
+  }
 
   return (
     <main>
@@ -22,7 +46,7 @@ export default function App() {
       <p className="muted">{t('app.privacyNote')}</p>
 
       <div className="controls">
-        <RecordButton status={state.status} onClick={toggle} />
+        <RecordButton status={state.status} onClick={toggleRecording} />
         {state.status === 'recording' && <Timer startedAt={state.startedAt} />}
         {state.status === 'paused' && (
           <span className="timer">{formatDuration(state.elapsedMs)}</span>
@@ -47,7 +71,15 @@ export default function App() {
       <ShortcutHints status={state.status} />
 
       <StatusMessage state={state} />
-      {state.status === 'done' && <TranscriptView note={state.note} />}
+      {viewed && <TranscriptView note={viewed} />}
+
+      <NoteList
+        notes={notes}
+        error={notesError}
+        selectedId={viewed?.id ?? null}
+        onSelect={openNote}
+        disabled={busy}
+      />
     </main>
   )
 }

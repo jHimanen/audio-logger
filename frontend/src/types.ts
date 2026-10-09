@@ -38,6 +38,7 @@ export type ErrorCode =
   | 'invalid_mime'
   | 'empty_audio'
   | 'validation_error'
+  | 'not_found'
   | 'server_error'
   | 'unknown'
 

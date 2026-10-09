@@ -146,3 +146,65 @@ kbd {
   transform-origin: left;
   transition: transform 60ms linear;
 }
+
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.playback audio {
+  flex: 1;
+  min-width: 0;
+}
+
+.notes {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.notes h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.note-item:hover:not(:disabled) {
+  border-color: var(--border);
+}
+
+.note-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note-item[aria-current='true'] {
+  border-color: var(--accent);
+  background: #fff;
+}
+
+.note-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
