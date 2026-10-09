@@ -40,11 +40,8 @@ export default function App() {
     if (active) setSelected(null)
   }
 
-  // In the done state `state.note` goes stale after a save; the editor tracks the saved copy.
-  const editor = useNoteEditor(viewed, (updated) => {
-    reload()
-    if (selected?.id === updated.id) setSelected(updated)
-  })
+  // The editor shows its own saved copy, so `viewed` is left as is; only the list reloads.
+  const editor = useNoteEditor(viewed, reload)
 
   useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
 

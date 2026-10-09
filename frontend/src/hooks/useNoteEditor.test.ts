@@ -46,6 +46,48 @@ describe('useNoteEditor', () => {
     expect(result.current.editedAt).toBe(saved.edited_at)
   })
 
+  it('keeps text typed while a save is in flight', async () => {
+    let resolve!: (n: NoteResponse) => void
+    update.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { result } = setup()
+    act(() => result.current.setText('eka'))
+    let saving!: Promise<void>
+    act(() => {
+      saving = result.current.save()
+    })
+    expect(result.current.saving).toBe(true)
+    act(() => result.current.setText('eka toka'))
+    await act(async () => {
+      resolve(makeNote({ text: 'eka' }))
+      await saving
+    })
+    expect(result.current.text).toBe('eka toka')
+    expect(result.current.dirty).toBe(true)
+    expect(result.current.saving).toBe(false)
+  })
+
+  it('leaves the next note alone when a save resolves after switching', async () => {
+    let resolve!: (n: NoteResponse) => void
+    update.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { result, rerender, onSaved } = setup()
+    act(() => result.current.setText('eka'))
+    let saving!: Promise<void>
+    act(() => {
+      saving = result.current.save()
+    })
+    const other = makeNote({ id: 'other', text: 'toinen' })
+    rerender({ n: other })
+    expect(result.current.saving).toBe(false)
+    act(() => result.current.setText('toinen luonnos'))
+    await act(async () => {
+      resolve(makeNote({ text: 'eka' }))
+      await saving
+    })
+    expect(onSaved).toHaveBeenCalledOnce()
+    expect(result.current.text).toBe('toinen luonnos')
+    expect(result.current.dirty).toBe(true)
+  })
+
   it('does not save when clean', async () => {
     const { result } = setup()
     await act(() => result.current.save())

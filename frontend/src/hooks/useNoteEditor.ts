@@ -16,8 +16,9 @@ export interface NoteEditor {
 }
 
 /**
- * Draft state for the viewed note. A new `note` object (another note, or a fresh copy)
- * drops the draft. `onSaved` receives the note as the server stored it.
+ * Draft state for the viewed note. A new `note` object drops the draft, so pass the same
+ * object while the same note stays on screen. After a save the editor shows the server's
+ * copy itself; `onSaved` receives it too.
  */
 export function useNoteEditor(
   note: NoteResponse | null,
@@ -33,6 +34,7 @@ export function useNoteEditor(
     setShown(note)
     setSaved(null)
     setDraft(null)
+    setSaving(false)
     setError(null)
   }
 
@@ -64,7 +66,7 @@ export function useNoteEditor(
     } catch (err) {
       if (latestId.current === current.id) setError(err instanceof ApiError ? err.code : 'unknown')
     } finally {
-      setSaving(false)
+      if (latestId.current === current.id) setSaving(false)
     }
   }
 

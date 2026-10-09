@@ -11,12 +11,11 @@ interface Props {
 }
 
 export function TranscriptView({ note, editor, disabled }: Props) {
-  const hint =
-    note.transcription === null
+  const hint = editor.text.trim()
+    ? null
+    : note.transcription === null
       ? t('transcript.failed')
-      : note.transcription.raw_text.trim()
-        ? null
-        : t('transcript.empty')
+      : t('transcript.empty')
   return (
     <section className="transcript">
       <h2>{t('transcript.title')}</h2>
