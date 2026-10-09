@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { LevelMeter } from './components/LevelMeter'
 import { NoteList } from './components/NoteList'
 import { RecordButton } from './components/RecordButton'
@@ -11,6 +11,7 @@ import { useHotkeys } from './hooks/useHotkeys'
 import { useNoteEditor } from './hooks/useNoteEditor'
 import { useNotes } from './hooks/useNotes'
 import { useRecorder } from './hooks/useRecorder'
+import { useUnsavedGuard } from './hooks/useUnsavedGuard'
 import { t } from './i18n'
 import type { NoteResponse } from './types'
 
@@ -43,11 +44,19 @@ export default function App() {
   // The editor shows its own saved copy, so `viewed` is left as is; only the list reloads.
   const editor = useNoteEditor(viewed, reload)
 
-  useHotkeys({ onToggle: toggle, onCancel: cancel, onTogglePause: togglePause })
+  // Starting a recording, opening another note or "Uusi äänitys" all drop the draft.
+  const guard = useUnsavedGuard(editor.dirty)
+  const idle = state.status === 'idle'
+  const guardedToggle = useCallback(() => (idle ? guard(toggle) : toggle()), [idle, guard, toggle])
+
+  useHotkeys({ onToggle: guardedToggle, onCancel: cancel, onTogglePause: togglePause })
 
   const openNote = (note: NoteResponse) => {
-    reset()
-    setSelected(note)
+    if (note.id === selected?.id) return
+    guard(() => {
+      reset()
+      setSelected(note)
+    })
   }
 
   return (
@@ -56,7 +65,7 @@ export default function App() {
       <p className="muted">{t('app.privacyNote')}</p>
 
       <div className="controls">
-        <RecordButton status={state.status} onClick={toggle} />
+        <RecordButton status={state.status} onClick={guardedToggle} />
         {state.status === 'recording' && <Timer startedAt={state.startedAt} />}
         {state.status === 'paused' && (
           <span className="timer">{formatDuration(state.elapsedMs)}</span>
@@ -73,7 +82,7 @@ export default function App() {
         )}
         {active && stream && <LevelMeter stream={stream} paused={state.status === 'paused'} />}
         {finished && (
-          <button type="button" className="secondary-button" onClick={reset}>
+          <button type="button" className="secondary-button" onClick={() => guard(reset)}>
             {t('action.newRecording')}
           </button>
         )}

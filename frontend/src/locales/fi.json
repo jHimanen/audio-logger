@@ -25,6 +25,7 @@
   "edit.saving": "Tallennetaan…",
   "edit.restore": "Palauta alkuperäinen",
   "edit.editedAt": "Muokattu {date}",
+  "edit.discardConfirm": "Tallentamattomat muutokset menetetään. Jatketaanko?",
   "error.mic_denied": "Mikrofonin käyttö estettiin. Salli mikrofoni selaimen asetuksista.",
   "error.mic_unavailable": "Mikrofonia ei löytynyt.",
   "error.recorder_unsupported": "Selain ei tue äänitystä. Käytä Chromea.",
