@@ -1,4 +1,4 @@
-import httpx
+import httpx2 as httpx
 import pytest
 
 from audio_logger.providers.base import TranscriptionError
@@ -56,9 +56,14 @@ def test_connection_error_raises() -> None:
         provider_with(handler).transcribe(b"x", "audio/webm", "fi")
 
 
-def test_missing_text_raises() -> None:
+@pytest.mark.parametrize("body", [{"language_code": "fi"}, {"text": None}, ["text"], "nope"])
+def test_missing_or_invalid_text_raises(body: object) -> None:
     def handler(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"language_code": "fi"})
+        return httpx.Response(200, json=body)
 
-    with pytest.raises(TranscriptionError):
+    with pytest.raises(TranscriptionError, match="no text field"):
         provider_with(handler).transcribe(b"x", "audio/webm", "fi")
+
+
+def test_default_client_timeout() -> None:
+    assert ElevenLabsProvider("k")._client.timeout == httpx.Timeout(90, connect=10)
