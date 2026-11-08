@@ -62,6 +62,9 @@ finished and tested.
 
 - [ ] Mode framework: `backend/prompts/<locale>/<mode>.md` + manifest; `ProcessingService`
 - [ ] First modes for `fi`: `cleanup` (fillers, punctuation, paragraphs), `summary`, `bullets`
+- [ ] `dictation` mode for `fi`: reading paper logbooks aloud. Verbatim wording (no
+      rephrasing or modernising), spoken punctuation commands, dates and numbers as digits,
+      reader asides as `[epäselvä]`-style markers, a date heading per entry
 - [ ] Mode selector in the UI; result replaces `note.md`, raw transcript preserved
 - [ ] Claude called from the backend only (no keys in the browser); decide model and
       streaming, record in ARCHITECTURE.md

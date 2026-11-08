@@ -100,6 +100,9 @@ disappoints, a second provider can be trialled on the kept audio (3.6) – see R
   via the Claude API, producing `note.md` while the raw transcript stays in `meta.json`.
 - Templates live in `backend/prompts/<locale>/<mode>.md`; a mode is defined by its template
   plus a small manifest (name, description, output format).
+- `cleanup` tidies the user's own speech; `dictation` transcribes an existing text read aloud
+  (old paper logbooks) and must preserve its wording. Separate modes because their prompt
+  priorities conflict.
 - Not part of the MVP; model choice and streaming decided when Stage 4 starts.
 
 ### 3.5 Rust components (none planned)
@@ -284,3 +287,4 @@ Google Cloud is the leading candidate for deployment. Assessed 2026-10-09; not y
 | 2026-10-09 | Delete only from the viewed note; a 404 on delete counts as deleted | Delete in list rows | One place, one confirmation path; the note is gone either way |
 | 2026-10-09 | Restore original = load `raw_text` into the draft, saved explicitly | Server-side restore endpoint | No new route; same save path as any edit |
 | 2026-10-09 | Editor shows its own saved copy after a save; `App` keeps `viewed` unchanged | Replace `selected` with the saved note | Replacing the object would reset the editor and drop text typed during the save; `state.note` in the done state is stale anyway |
+| 2026-11-08 | Separate `dictation` mode for reading paper logbooks aloud | Extend `cleanup` | Cleanup may smooth wording; a historical record must stay verbatim, and asides must be marked, not dropped. A mode is one template, so the split is cheap |
