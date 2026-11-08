@@ -1,7 +1,7 @@
 # Roadmap
 
 > Living document. Stages are ordered; each stage is shippable on its own.
-> Last updated: 2026-10-09 (Stage 3 implemented)
+> Last updated: 2026-11-08 (Stages 5–6 replaced by the move into `mokki-web`; see `../roadmap.md` Phase 5)
 
 ## Stage 0 – Planning 
 
@@ -55,36 +55,43 @@ Out of scope: pause/resume, editing, auth, DB, deployment, Safari.
 - [x] Extra: restore the original transcript into the editor
 - [x] Extra: frontend unit tests (Vitest + jsdom + Testing Library)
 
-## Stage 4 – Post-processing modes (Claude) (current)
+## Stage 4 – Post-processing modes (Claude) (next, last stage in this repo)
+
+Independent of the family site; can start now. Build it here so it moves to `mokki-web`
+finished and tested.
 
 - [ ] Mode framework: `backend/prompts/<locale>/<mode>.md` + manifest; `ProcessingService`
 - [ ] First modes for `fi`: `cleanup` (fillers, punctuation, paragraphs), `summary`, `bullets`
 - [ ] Mode selector in the UI; result replaces `note.md`, raw transcript preserved
-- [ ] Decide model and streaming; record in ARCHITECTURE.md
+- [ ] Claude called from the backend only (no keys in the browser); decide model and
+      streaming, record in ARCHITECTURE.md
 - [ ] Optional: auto-apply a default mode on save
 
-## Stage 5 – Persistence
+## After Stage 4 – folded into `mokki-web`
 
-- [ ] `NoteRepository` implementation on a database (SQLite first unless deployment target says otherwise)
-- [ ] Audio moved to blob storage; migration script from `notes/` folders
-- [ ] Search across notes
+The audio logger becomes part of the Kaartama family site. Its backend and frontend move into
+`mokki-web`, with their history, and this repo is archived. That work is **Phase 5 of the
+high-level roadmap (`../roadmap.md`)**, which owns the plan from here on: one backend, one
+deployment, one login, notes in the shared archive bucket, a recording view inside the site,
+and "Lisää lokiin" writing to the vault's logbook.
 
-## Stage 6 – Deployment & multi-language
+The previous Stage 5 (SQLite, blob storage, search) and Stage 6 (standalone GCP deployment,
+own auth, second locale) are replaced by that phase and will not be built here.
 
-Leading candidate: **GCP** (Cloud Run + Cloud Storage; see ARCHITECTURE.md §9).
-
-- [ ] Confirm hosting target; HTTPS, secrets management (Secret Manager if GCP)
-- [ ] Containerise backend (serves `frontend/dist`), deploy to Cloud Run
-- [ ] `NoteRepository` audio backend on Cloud Storage
-- [ ] Auth (single-user login at minimum)
-- [ ] Safari / mobile browser support (MP4/AAC input)
-- [ ] Second locale (`en`): `locales/en.json`, `prompts/en/`, per-note language selector
+Before Stage 4 is done, keep this repo self-contained: do not add code for the bucket, Access,
+or `mokki-web` here. Those land in `mokki-web` as part of the move.
 
 ## Parking lot
 
+Moves to `mokki-web` with the code. Not planned unless a trigger below fires.
+
 - STT bake-off: second `TranscriptionProvider` run over stored audio, compared against
-  ElevenLabs. Candidates: Google Chirp 3 (`eu` region, EU residency; natural fit if deploying
-  to GCP) or OpenAI `gpt-transcribe`. Trigger: accuracy disappoints, or GCP deployment begins.
+  ElevenLabs. Candidates: Google Chirp 3 (`eu` region, EU residency) or OpenAI
+  `gpt-transcribe`. Trigger: accuracy disappoints or EU residency becomes a requirement.
+- Search across notes. Not planned: the family site's search covers logbook entries, and
+  those are what matter.
+- Second locale (`en`): `locales/en.json`, `prompts/en/`, per-note language selector. Not
+  planned while the family is the only audience.
 - Local STT provider (`whisper-rs` via PyO3) for offline/private use.
 - Streaming transcription for live text while speaking.
 - Speaker diarisation (Scribe v2 supports it) for meeting-style notes.
