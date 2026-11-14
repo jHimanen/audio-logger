@@ -5,6 +5,8 @@ Backend Python/FastAPI, frontend React/Vite/TS. Language-agnostic by design, Fin
 
 ## Read first
 
+`ARCHITECTURE.md` is large: `grep -n '^#'` it, then read only the sections the task needs.
+
 - `ARCHITECTURE.md` – components, interfaces, data model, decision log. Update the decision log
   when a technical choice changes.
 - `ROADMAP.md` – stages and task checklists. Tick tasks as they land.
