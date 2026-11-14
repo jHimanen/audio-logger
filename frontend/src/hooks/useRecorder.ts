@@ -18,8 +18,6 @@ export interface Recorder {
   state: RecorderState
   /** The live mic stream while recording or paused, else null. */
   stream: MediaStream | null
-  start: () => Promise<void>
-  stop: () => void
   cancel: () => void
   togglePause: () => void
   toggle: () => void
@@ -165,5 +163,5 @@ export function useRecorder(): Recorder {
     }
   }, [transition])
 
-  return { state, stream, start, stop, cancel, togglePause, toggle, reset }
+  return { state, stream, cancel, togglePause, toggle, reset }
 }
